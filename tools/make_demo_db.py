@@ -17,21 +17,24 @@ from core import Store  # noqa: E402
 TODAY = date.today()
 D = lambda n: (TODAY - timedelta(days=n)).isoformat()  # noqa: E731
 
-# material, colour, hex, brand, spool type, spares, days since opened
+# material, colour, hex, brand, spool type, spares, days since opened, price
+# Prices are the usual shop figures for a 1 kg spool: the cheap PLA around 20,
+# the engineering plastics higher. They only exist to make the cost column and
+# the Spent tile show something in the screenshots.
 FILAMENTS = [
-    ("PLA",     "black",            "#1c1c1e", "Bambu Lab", "plastic",   2, 34),
-    ("PLA",     "white",            "#f4f4f2", "Bambu Lab", "plastic",   1, 21),
-    ("PLA",     "grey",             "#8a8f96", "eSUN",      "cardboard", 0, 48),
-    ("PLA",     "red",              "#d62828", "Sunlu",     "plastic",   1, 12),
-    ("PLA",     "blue",             "#1f5fd0", "eSUN",      "cardboard", 0,  9),
-    ("PLA",     "yellow",           "#f2c14e", "Sunlu",     "plastic",   0, 55),
-    ("PLA",     "sakura pink matte","#f4b9c7", "Bambu Lab", "plastic",   0,  6),
-    ("PLA",     "olive green matte","#6b7a3a", "Polymaker", "cardboard", 1, 18),
-    ("PLA Silk","gold",             "#d4af37", "Overture",  "cardboard", 0, 27),
-    ("PETG",    "black",            "#1c1c1e", "Prusament", "plastic",   1, 41),
-    ("PETG",    "transparent",      "#cfd6e0", "eSUN",      "plastic",   0, 15),
-    ("TPU",     "orange",           "#e8722c", "Sunlu",     "plastic",   0, 11),
-    ("ABS",     "natural",          "#e3ddd0", "Elegoo",    "cardboard", 0, 30),
+    ("PLA",     "black",            "#1c1c1e", "Bambu Lab", "plastic",   2, 34, 24.99),
+    ("PLA",     "white",            "#f4f4f2", "Bambu Lab", "plastic",   1, 21, 24.99),
+    ("PLA",     "grey",             "#8a8f96", "eSUN",      "cardboard", 0, 48, 18.49),
+    ("PLA",     "red",              "#d62828", "Sunlu",     "plastic",   1, 12, 16.99),
+    ("PLA",     "blue",             "#1f5fd0", "eSUN",      "cardboard", 0,  9, 18.49),
+    ("PLA",     "yellow",           "#f2c14e", "Sunlu",     "plastic",   0, 55, 16.99),
+    ("PLA",     "sakura pink matte","#f4b9c7", "Bambu Lab", "plastic",   0,  6, 27.99),
+    ("PLA",     "olive green matte","#6b7a3a", "Polymaker", "cardboard", 1, 18, 22.99),
+    ("PLA Silk","gold",             "#d4af37", "Overture",  "cardboard", 0, 27, 23.99),
+    ("PETG",    "black",            "#1c1c1e", "Prusament", "plastic",   1, 41, 29.99),
+    ("PETG",    "transparent",      "#cfd6e0", "eSUN",      "plastic",   0, 15, 21.99),
+    ("TPU",     "orange",           "#e8722c", "Sunlu",     "plastic",   0, 11, 26.99),
+    ("ABS",     "natural",          "#e3ddd0", "Elegoo",    "cardboard", 0, 30, 21.49),
 ]
 
 # project, url, failed
@@ -71,11 +74,11 @@ def main(path):
     rnd = random.Random(20260807)   # fixed seed: reproducible screenshots
 
     ids = []
-    for material, color, hexv, brand, stype, spares, days in FILAMENTS:
+    for material, color, hexv, brand, stype, spares, days, price in FILAMENTS:
         fid = s.add_filament({
             "material": material, "color": color, "hex": hexv, "brand": brand,
             "spool_type": stype, "stock": spares, "roll_weight": 1000,
-            "roll_opened": D(days),
+            "roll_opened": D(days), "price": price,
         })
         ids.append(fid)
 
