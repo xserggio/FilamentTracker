@@ -9,7 +9,7 @@ const S = {
   his: { search: '', filament: '', from: '', to: '', failedOnly: false },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null,
-  slice: null, sliceTimer: null,
+  slice: null, sliceTimer: null, snoozed: new Set(),
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -884,10 +884,13 @@ async function checkSlices() {
   if (S.settings.slicer_watch === '0') return;
   const list = await call('slices', { limit: 1 });
   if (failed(list) || !list || !list.length) return;
+  const sl = list[0];
   // a card already on screen for the same slice must not restart its animation
-  if (S.slice && S.slice.path === list[0].path) return;
-  S.slice = list[0];
-  showSliceCard(S.slice);
+  if (S.slice && S.slice.path === sl.path) return;
+  // and one put off must stay put off, or the next check brings it straight back
+  if (S.snoozed.has(sl.path)) return;
+  S.slice = sl;
+  showSliceCard(sl);
 }
 
 function showSliceCard(sl) {
@@ -905,11 +908,16 @@ function showSliceCard(sl) {
   show('#sliceCard');
 }
 
-/* "Not now" hides the card but leaves the slice pending, so it comes back next
-   launch. The × says it is dealt with and moves the watermark past it. */
+/* "Not now" puts this slice off for the rest of the session: it is still
+   pending, so it is offered again next launch, but it does not come back in
+   forty-five seconds. The × says it is dealt with for good and moves the
+   watermark past it. */
 function hideSliceCard(forget) {
   hide('#sliceCard');
-  if (forget && S.slice) call('dismiss_slice', { path: S.slice.path });
+  if (S.slice) {
+    if (forget) call('dismiss_slice', { path: S.slice.path });
+    else S.snoozed.add(S.slice.path);
+  }
   S.slice = null;
 }
 
@@ -1245,7 +1253,8 @@ async function saveSlicerDir(dir) {
   S.settings.slicer_dir = dir;
   $('#setSlicerDir').value = dir;
   await renderSlicerFolder();
-  S.slice = null;            // the next check looks in the new folder
+  S.slice = null;
+  S.snoozed.clear();         // the next check looks in the new folder
   checkSlices();
   toast(t('toast.folderSaved'));
 }
