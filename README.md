@@ -179,12 +179,13 @@ When you slice, Bambu Studio writes the plate into a folder of its own, and in
 there are the grams of every filament it is about to use. Filament Tracker reads
 that folder and offers the print instead of making you type it:
 
-> **Just sliced** · chimenea escalada D2.2 — 7.5 g · PLA
-> *Not now* · **Log this print**
+<img src="docs/slice.png" alt="The card offering the print you just sliced">
 
 **Log this print** opens the normal form with the project name, the grams and a
 spool already picked per colour. Nothing is recorded until you press Save, and
 you can change anything first.
+
+<img src="docs/sliceform.png" alt="The print form filled in from the slice">
 
 **The colour in a sliced file is not the spool you loaded.** Most of the time you
 pick a profile because it is the only one that exists — there is no Matte under
@@ -362,7 +363,7 @@ slicer.py      reads the plates Bambu Studio has sliced
 build.ps1      PyInstaller packaging
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo in navy, black and white (svg, png, ico)
-tools/         catalogue builder, demo database generator, screenshot script
+tools/         catalogue builder, demo database and demo slice, screenshots
 data/          your database (not in the repo)
 ```
 
