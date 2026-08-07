@@ -36,6 +36,12 @@ needs drying more often than PLA.
   two spares are eSUN.
 - **Weigh instead of guess.** Put the spool on a scale, enter the reading, and the
   app subtracts the empty-spool weight for that brand and spool type.
+- **Temperatures and density.** Nozzle and bed for that exact filament, from a
+  catalogue of 53 manufacturers and 415 products bundled with the app. No
+  connection needed, and it says whether the figure is the product's, the
+  brand's or just typical for the plastic.
+- **Prices and cost per print.** Optional. Each print is costed with the roll
+  that was fitted that day, in any of the 178 ISO currencies.
 - **Drying reminders.** Per-material intervals, counted from opening and reset
   every time you log a drying.
 - **Failed prints.** Flag a print as failed and correct the grams it actually used —
@@ -130,6 +136,30 @@ The card footer has, in order: days since the roll was opened, the spare counter
 
 Filters at the top: text search, material, sort order, *low only*, *with spares* and
 *show archived*.
+
+### Temperatures and density
+
+The detail sheet shows the nozzle and bed temperature for that filament, and its
+density. They are not typed in: they come from a catalogue of **53 manufacturers,
+415 products and 3531 colours** built from
+[SpoolmanDB](https://github.com/Donkie/SpoolmanDB) and shipped with the app, so
+none of this needs a connection.
+
+The lookup goes from specific to general and says which it used:
+
+| Source | Meaning |
+|---|---|
+| the product | the manufacturer publishes a figure for that exact filament, e.g. Bambu Lab PLA Matte |
+| the brand | the brand's own range for that material |
+| typical | the usual range for the plastic, whoever made it |
+
+So a spool whose brand you never filled in still shows something useful, and it
+says so rather than pretending to know. Settings has a **°C / °F** switch; the
+data is always stored in Celsius.
+
+The brand's real colours are offered in the colour picker too, so *Bambu Lab ·
+PLA Matte* proposes the fifteen matte colours it actually sells instead of a
+blank swatch.
 
 ### Logging a print
 
@@ -232,6 +262,27 @@ between versions. So the moment you correct the tare by weighing one of your own
 spools, the app stores **your** number for that brand and type and uses it from then
 on. They are also editable by hand in **Settings → Empty spool weight by brand**.
 
+### Prices and what a print costs
+
+Give a spool a price -- on the filament, on a new roll or on each spare -- and the
+history gains a **Cost** column and Statistics a **Spent** tile. With no prices
+entered, neither appears; the app does not show columns of zeroes.
+
+Each print is costed with **the roll that was fitted that day**, not today's
+price. Buying the same colour again at a different price must not rewrite what
+last month cost, so replacing a 21.99 spool with one at 34.99 leaves the old
+prints untouched and only charges the new rate from then on.
+
+The currency is set in Settings and covers **all 178 active ISO 4217 codes**, not
+just the majors. The name and symbol come from the system, so the list reads
+"PLN - Polish zloty" in English and "PLN - esloti polaco" in Spanish, and the
+same number formats as 1.234,50 EUR, US$1,234.50 or 1 235 JPY. Nothing is ever
+converted and no exchange rate is fetched: prices are shown in the currency they
+were entered in.
+
+Statistics also carries the value of what is on the shelf -- what is left on the
+open rolls plus the spares.
+
 ### Statistics
 
 <img src="docs/stats.png" alt="Statistics">
@@ -297,20 +348,23 @@ folder and vanish on exit.
 ```
 app.py         pywebview window and the bridge to the interface
 core.py        SQLite schema, paths, remaining-grams maths and statistics
+catalog.py     manufacturer catalogue, temperatures and colour matching
+catalog.json   53 manufacturers, 415 products, 3531 colours
 importer.py    Excel reader
 slicer.py      reads the plates Bambu Studio has sliced
 build.ps1      PyInstaller packaging
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo in navy, black and white (svg, png, ico)
-tools/         demo database generator and screenshot script
+tools/         catalogue builder, demo database generator, screenshot script
 data/          your database (not in the repo)
 ```
 
 ## Credits
 
-Empty spool weights from [SpoolmanDB](https://github.com/Donkie/SpoolmanDB) and
-[The Empty Spool](https://theemptyspool.cc/), both community-maintained. Built on
-[pywebview](https://pywebview.flowrl.com/).
+Empty spool weights, printing temperatures, densities and the manufacturer colour
+catalogue come from [SpoolmanDB](https://github.com/Donkie/SpoolmanDB) (MIT),
+cross-checked against [The Empty Spool](https://theemptyspool.cc/). Both are
+community-maintained. Built on [pywebview](https://pywebview.flowrl.com/).
 
 ## License
 
