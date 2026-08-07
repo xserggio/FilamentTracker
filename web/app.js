@@ -445,6 +445,7 @@ function renderInventory() {
             <span class="tag">${esc(f.material)}</span>
             ${f.roll_brand ? `<span class="tag brand">${esc(f.roll_brand)}</span>` : ''}
             ${stockTag(f)}
+            ${dryBadge(f)}
           </span>
         </span>
         <button class="icon-btn" data-edit="${f.id}" title="${esc(t('inv.edit'))}">${svg('pencil')}</button>
@@ -462,7 +463,6 @@ function renderInventory() {
         <span class="used" title="${esc(t('inv.openedTitle', {
           d: fdate(f.roll_opened), used: kg(f.total_used) }))}">${
           f.days_open != null ? `${f.days_open} d` : fdate(f.roll_opened)}</span>
-        ${dryBadge(f)}
         <div class="stepper">
           <button data-stock="${f.id}" data-delta="-1" title="${esc(t('inv.spareRemove'))}">−</button>
           <button class="count ${spareBrands(f).length > 1 ? 'mixed' : ''}"
