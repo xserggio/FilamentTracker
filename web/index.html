@@ -453,6 +453,24 @@
 </div>
 
 <!-- ============ MODAL: spares ============ -->
+<!-- Every plate still in the slicer cache, so one that was dismissed, or
+     sliced while the app was closed, can still be logged. -->
+<div class="overlay" id="slicesModal" hidden>
+  <div class="modal">
+    <header class="modal-head">
+      <h2 data-i18n="slices.title">Recently sliced</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <p class="muted dry-help" data-i18n="slices.sub"></p>
+      <div id="slicesList" class="slices"></div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
+    </footer>
+  </div>
+</div>
+
 <div class="overlay" id="sparesModal" hidden>
   <div class="modal narrow">
     <header class="modal-head">

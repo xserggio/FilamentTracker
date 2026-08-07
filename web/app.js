@@ -9,7 +9,7 @@ const S = {
   his: { search: '', filament: '', from: '', to: '', failedOnly: false },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null,
-  slice: null, sliceTimer: null,
+  slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -156,9 +156,17 @@ function setView(v) {
   act.innerHTML = '';
   if (v === 'inventory' || v === 'history') {
     const label = v === 'inventory' ? t('action.newFilament') : t('nav.newPrint');
-    act.innerHTML = `<button class="btn primary" id="taAction">
+    // The slicer button only earns its place next to New print when there is
+    // actually a folder with plates in it -- otherwise it is a dead end for
+    // anyone not running Bambu Studio.
+    const slices = v === 'history' && S.sliceFolder && S.sliceFolder.plates;
+    act.innerHTML = `${slices ? `<button class="btn ghost" id="taSlices">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      ${esc(t('action.fromSlice'))}</button>` : ''}
+      <button class="btn primary" id="taAction">
       <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg> ${esc(label)}</button>`;
     $('#taAction').onclick = () => (v === 'inventory' ? openFilament(null) : openPrint(null));
+    if (slices) $('#taSlices').onclick = openSliceList;
   }
   renderAll();
 }
@@ -884,18 +892,17 @@ async function checkSlices() {
   if (S.settings.slicer_watch === '0') return;
   const list = await call('slices', { limit: 1 });
   if (failed(list) || !list || !list.length) return;
+  const sl = list[0];
   // a card already on screen for the same slice must not restart its animation
-  if (S.slice && S.slice.path === list[0].path) return;
-  S.slice = list[0];
-  showSliceCard(S.slice);
+  if (S.slice && S.slice.path === sl.path) return;
+  // and one put off must stay put off, or the next check brings it straight back
+  if (S.snoozed.has(sl.path)) return;
+  S.slice = sl;
+  showSliceCard(sl);
 }
 
 function showSliceCard(sl) {
-  const when = new Date(sl.sliced_at);
-  const mins = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
-  $('#sliceWhen').textContent = mins < 1 ? t('slice.justNow')
-    : mins < 60 ? t('slice.minsAgo', { n: mins })
-      : when.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
+  $('#sliceWhen').textContent = sliceWhen(sl);
   $('#sliceProject').textContent = sl.project || t('slice.untitled');
   $('#sliceChips').innerHTML = sl.items.map((i) => `
     <span class="slice-chip">
@@ -905,12 +912,58 @@ function showSliceCard(sl) {
   show('#sliceCard');
 }
 
-/* "Not now" hides the card but leaves the slice pending, so it comes back next
-   launch. The × says it is dealt with and moves the watermark past it. */
+/* "Not now" puts this slice off for the rest of the session: it is still
+   pending, so it is offered again next launch, but it does not come back in
+   forty-five seconds. The × says it is dealt with for good and moves the
+   watermark past it. */
 function hideSliceCard(forget) {
   hide('#sliceCard');
-  if (forget && S.slice) call('dismiss_slice', { path: S.slice.path });
+  if (S.slice) {
+    if (forget) call('dismiss_slice', { path: S.slice.path });
+    else S.snoozed.add(S.slice.path);
+  }
   S.slice = null;
+}
+
+/* Everything still in the slicer cache, newest first. The card only ever
+   offers the newest plate and only once; this is how you get back to one you
+   put aside, or one sliced while the app was closed. */
+async function openSliceList() {
+  const box = $('#slicesList');
+  box.innerHTML = '';
+  show('#slicesModal');
+
+  const list = await call('slices', { all: true, limit: 12 });
+  if (failed(list) || !list || !list.length) {
+    box.innerHTML = `<div class="empty"><b>${esc(t('slices.empty'))}</b>${esc(t('slices.emptyHint'))}</div>`;
+    return;
+  }
+  box.innerHTML = list.map((sl, i) => `
+    <button class="slice-row" data-slice="${i}">
+      <span class="slice-when">${esc(sliceWhen(sl))}</span>
+      <span class="slice-what">
+        <b>${esc(sl.project || t('slice.untitled'))}</b>
+        <span class="slice-chips">${sl.items.map((it) => `
+          <span class="slice-chip">
+            <span class="dot" style="background:${esc(it.hex || '#888')}"></span>
+            ${g(it.grams)} g · ${esc(it.material || '?')}
+          </span>`).join('')}</span>
+      </span>
+      <span class="slice-grams">${g(sl.total)} g</span>
+    </button>`).join('');
+
+  $$('[data-slice]', box).forEach((b) => {
+    b.onclick = () => { hide('#slicesModal'); openPrintFromSlice(list[b.dataset.slice]); };
+  });
+}
+
+/* "just now" while it is fresh, a date once it is not. */
+function sliceWhen(sl) {
+  const when = new Date(sl.sliced_at);
+  const mins = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
+  if (mins < 1) return t('slice.justNow');
+  if (mins < 60) return t('slice.minsAgo', { n: mins });
+  return when.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
 }
 
 /* ---------- MODAL: print ---------- */
@@ -1245,7 +1298,10 @@ async function saveSlicerDir(dir) {
   S.settings.slicer_dir = dir;
   $('#setSlicerDir').value = dir;
   await renderSlicerFolder();
-  S.slice = null;            // the next check looks in the new folder
+  S.slice = null;
+  S.snoozed.clear();         // the next check looks in the new folder
+  S.sliceFolder = await call('slicer_folder');
+  if (failed(S.sliceFolder)) S.sliceFolder = null;
   checkSlices();
   toast(t('toast.folderSaved'));
 }
@@ -1466,6 +1522,10 @@ async function boot() {
 
   // Slicing usually happens with this window in the background, so the check
   // runs on a timer as well as whenever the window is looked at again.
+  S.sliceFolder = await call('slicer_folder');
+  if (failed(S.sliceFolder)) S.sliceFolder = null;
+  if (S.view === 'history') setView('history');   // the button appears once we know
+
   checkSlices();
   S.sliceTimer = setInterval(checkSlices, 45000);
   window.addEventListener('focus', checkSlices);

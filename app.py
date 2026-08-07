@@ -261,7 +261,9 @@ class Api:
         data = data or {}
         try:
             s = self._store
-            if s.get_settings().get("slicer_watch", "1") != "1":
+            # The setting governs the card that appears on its own, not asking
+            # for the list on purpose, which is what "all" means here.
+            if not data.get("all") and s.get_settings().get("slicer_watch", "1") != "1":
                 return ok([])
             try:
                 since = float(s.get_settings().get("slicer_seen") or 0)
