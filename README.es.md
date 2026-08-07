@@ -207,9 +207,9 @@ El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* aparta ese lami
 durante la sesión y lo vuelve a ofrecer al siguiente arranque; la **×** lo descarta
 para siempre. Un laminado que no llegaste a imprimir simplemente no se confirma nunca.
 
-**Desde un laminado.** El aviso solo ofrece la placa más reciente, y una sola vez.
-En Historial, junto a *Nueva impresión*, **Desde un laminado** lista todo lo que
-sigue en la carpeta — así puedes apuntar uno que apartaste, o uno que laminaste con
+**Ver slices de Bambu.** El aviso solo ofrece la placa más reciente, y una sola
+vez. En Historial, junto a *Nueva impresión*, **Ver slices de Bambu** lista todo
+lo que sigue en la carpeta — así puedes apuntar uno que apartaste, o uno que laminaste con
 la app cerrada. Solo aparece si hay una carpeta con placas dentro.
 
 **La carpeta.** La encuentra sola, y en ese mismo panel se ve cuál está usando y
