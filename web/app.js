@@ -436,10 +436,11 @@ function renderInventory() {
 
   $('#filamentCards').innerHTML = list.length ? list.map((f) => {
     const col = statusColor(f);
-    return `<div class="fcard ${f.low || f.empty ? 'is-low' : ''} ${f.archived ? 'is-archived' : ''}">
+    return `<div class="fcard ${f.low || f.empty ? 'is-low' : ''} ${f.archived ? 'is-archived' : ''}"
+                 data-detail="${f.id}">
       <div class="fcard-top">
         <span class="swatch" style="background:${esc(f.hex)}"></span>
-        <span class="fcard-title" data-detail="${f.id}" role="button">
+        <span class="fcard-title" role="button" tabindex="0">
           <b title="${esc(f.name)}">${esc(f.name)}</b>
           <span class="fcard-meta">
             <span class="tag">${esc(f.material)}</span>
@@ -481,7 +482,20 @@ function renderInventory() {
 
   const find = (id) => S.filaments.find((f) => f.id == id);
   $$('#filamentCards [data-edit]').forEach((b) => { b.onclick = () => openFilament(find(b.dataset.edit)); });
-  $$('#filamentCards [data-detail]').forEach((b) => { b.onclick = () => openDetail(find(b.dataset.detail)); });
+  // The whole card opens the sheet, not just the name: everything on it is
+  // about that filament, and hunting for the one word that was clickable was
+  // needless. The controls in the footer keep their own jobs.
+  $$('#filamentCards [data-detail]').forEach((card) => {
+    const open = () => openDetail(find(card.dataset.detail));
+    card.onclick = (e) => {
+      if (e.target.closest('button, .stepper, input, select, a, textarea')) return;
+      open();
+    };
+    const title = card.querySelector('.fcard-title');
+    if (title) title.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    };
+  });
   $$('#filamentCards [data-roll]').forEach((b) => { b.onclick = () => openRoll(find(b.dataset.roll)); });
   $$('#filamentCards [data-adjust]').forEach((b) => {
     b.onclick = () => openRoll(find(b.dataset.adjust), 'adjust');

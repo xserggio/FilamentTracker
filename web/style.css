@@ -200,7 +200,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
   padding:15px 16px;display:flex;flex-direction:column;gap:12px;position:relative;
   transition:border-color .14s,transform .1s;
 }
-.fcard:hover{border-color:#303748}
+/* the whole card is the way in to the sheet, so it says so */
+.fcard{cursor:pointer}
+.fcard:hover{border-color:#3a4457;background:#191e28}
+.fcard button,.fcard .stepper{cursor:pointer}
+.fcard-title:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
 .fcard.is-low{border-color:rgba(242,97,92,.4)}
 .fcard.is-archived{opacity:.55}
 .fcard-top{display:flex;align-items:flex-start;gap:11px}
