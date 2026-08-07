@@ -145,6 +145,8 @@ density. They are not typed in: they come from a catalogue of **53 manufacturers
 [SpoolmanDB](https://github.com/Donkie/SpoolmanDB) and shipped with the app, so
 none of this needs a connection.
 
+<img src="docs/detail.png" alt="Filament detail sheet">
+
 The lookup goes from specific to general and says which it used:
 
 | Source | Meaning |

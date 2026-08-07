@@ -1,9 +1,16 @@
 # Capturas de la ventana para el README. Requiere la app compilada o py app.py.
 #   powershell -ExecutionPolicy Bypass -File tools\shots.ps1
+#
+# Antes de ejecutarlo, genera la base de ejemplo:
+#   py tools\make_demo_db.py data\filaments.db
+# El script la pone en ingles y apaga el aviso de Bambu Studio, para que las
+# capturas no dependan de lo que haya laminado quien las saca.
 param([string]$OutDir = "docs")
 
 Set-Location (Split-Path $PSScriptRoot -Parent)
 New-Item -ItemType Directory -Force $OutDir | Out-Null
+
+py -c "from core import Store; Store('data/filaments.db').set_settings({'lang':'en','slicer_watch':'0','currency':'EUR'})"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
@@ -16,29 +23,41 @@ public class Shot {
 }
 '@
 
-$views = @("dashboard", "inventory", "history", "stats")
+# La ficha no es una vista, es un modal: se abre por su filamento.
+$steps = @(
+  @{ name = "dashboard"; js = "setView('dashboard');" },
+  @{ name = "inventory"; js = "setView('inventory');" },
+  @{ name = "history";   js = "setView('history');" },
+  @{ name = "stats";     js = "setView('stats');" },
+  @{ name = "detail";    js = "setView('inventory'); setTimeout(() => openDetail(S.filaments.find((f) => f.name === 'PETG - black')), 900);" }
+)
+
 Copy-Item "web\app.js" "web\_app.js.bak" -Force
 
-foreach ($v in $views) {
+foreach ($s in $steps) {
     Get-Process -EA SilentlyContinue |
         Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
     Copy-Item "web\_app.js.bak" "web\app.js" -Force
-    Add-Content "web\app.js" "`nwindow.addEventListener('load', () => setTimeout(() => { try { setView('$v'); } catch(e){} }, 1200));"
+    Add-Content "web\app.js" "`nwindow.addEventListener('load', () => setTimeout(() => { try { $($s.js) } catch(e){} }, 1200));"
     Start-Sleep -Milliseconds 700
-    Start-Process -FilePath "pythonw" -ArgumentList "app.py" -WorkingDirectory (Get-Location)
-    Start-Sleep -Seconds 13
+    # Se guarda el proceso que arrancamos: buscar por titulo engancharia cualquier
+    # otra instancia abierta -- por ejemplo el .exe compilado, con datos reales.
+    $proc = Start-Process -FilePath "pythonw" -ArgumentList "app.py" `
+        -WorkingDirectory (Get-Location) -PassThru
+    Start-Sleep -Seconds 14
 
-    $p = Get-Process -EA SilentlyContinue |
-        Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Select-Object -First 1
-    if (-not $p) { Write-Host "no arranco para $v" -ForegroundColor Red; continue }
+    $p = Get-Process -Id $proc.Id -EA SilentlyContinue
+    if (-not $p -or -not $p.MainWindowHandle -or $p.MainWindowHandle -eq 0) {
+        Write-Host "no arranco para $($s.name)" -ForegroundColor Red; continue
+    }
     $r = New-Object Shot+RECT
     [Shot]::GetWindowRect($p.MainWindowHandle, [ref]$r) | Out-Null
     $bmp = New-Object System.Drawing.Bitmap ($r.R - $r.L), ($r.B - $r.T)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $hdc = $g.GetHdc(); [Shot]::PrintWindow($p.MainWindowHandle, $hdc, 2) | Out-Null; $g.ReleaseHdc($hdc)
-    $bmp.Save("$OutDir\$v.png", [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Save("$OutDir\$($s.name).png", [System.Drawing.Imaging.ImageFormat]::Png)
     $g.Dispose(); $bmp.Dispose()
-    Write-Host "$OutDir\$v.png"
+    Write-Host "$OutDir\$($s.name).png"
 }
 
 Copy-Item "web\_app.js.bak" "web\app.js" -Force

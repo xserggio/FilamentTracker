@@ -146,6 +146,8 @@ productos y 3531 colores** construido a partir de
 [SpoolmanDB](https://github.com/Donkie/SpoolmanDB) y empaquetado con la app, así
 que nada de esto necesita conexión.
 
+<img src="docs/detail.png" alt="Ficha de un filamento">
+
 La búsqueda va de lo concreto a lo general, y dice de dónde ha salido el dato:
 
 | Origen | Qué significa |
