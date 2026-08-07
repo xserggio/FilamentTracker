@@ -9,6 +9,7 @@ const S = {
   his: { search: '', filament: '', from: '', to: '', failedOnly: false },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null,
+  slice: null, sliceTimer: null,
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -64,6 +65,27 @@ function fmonth(ym) {
   if (isNaN(d)) return ym;
   return d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' });
 }
+// Catalogue temperatures are Celsius; the setting only changes how they read.
+function temp(c) {
+  if (c == null) return '—';
+  return (S.settings.temp_unit === 'F')
+    ? Math.round(c * 9 / 5 + 32) + ' °F'
+    : Math.round(c) + ' °C';
+}
+
+/* Money is only ever shown in the currency it was entered in; nothing is
+   converted. Intl knows the symbol, where it goes and how many decimals each
+   currency uses, so 1234.5 reads as 1.234,50 € in Spanish and ¥1,235 in
+   Japanese without a symbol table to maintain. */
+function money(n) {
+  const cur = S.settings.currency || 'EUR';
+  try {
+    return Number(n || 0).toLocaleString(locale(), { style: 'currency', currency: cur });
+  } catch (e) {
+    return Number(n || 0).toFixed(2) + ' ' + cur;
+  }
+}
+
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => todayISO().slice(0, 8) + '01';
 
@@ -242,6 +264,7 @@ const ICONS = {
   gauge: '<path d="M4 17a8 8 0 1 1 16 0"/><path d="m12 17 4.2-5"/>',
   trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7"/><path d="M10 11v5M14 11v5"/>',
   drop: '<path d="M12 3.5c3.6 4 6 7 6 9.8a6 6 0 0 1-12 0c0-2.8 2.4-5.8 6-9.8z"/>',
+  coin: '<ellipse cx="12" cy="7" rx="7.5" ry="3.4"/><path d="M4.5 7v10c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4V7"/><path d="M4.5 12c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4"/>',
   palette: '<circle cx="12" cy="12" r="8.2"/><circle cx="9.2" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="15.2" r="1.1" fill="currentColor" stroke="none"/>',
   link: '<path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7l-1.4 1.4"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.4-1.4"/>',
   bang: '<path d="M12 3.6 2.6 19.8h18.8z"/><path d="M12 9.6v4.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>',
@@ -479,6 +502,24 @@ function renderInventory() {
 
 
 /* ---------- MODAL: filament detail sheet ---------- */
+
+/* Printing settings, with where they came from spelled out: a figure published
+   by the manufacturer and a generic guess for the material should not look the
+   same on screen. */
+function specsBlock(sp, fil) {
+  if (!sp || (sp.extruder == null && sp.density == null)) return '';
+  const src = sp.source === 'generic' || sp.source === 'none'
+    ? t(sp.source === 'none' ? 'detail.specsNone' : 'detail.specsGeneric', { mat: fil.material })
+    : t('detail.specsFrom', { brand: sp.brand || fil.roll_brand || '', product: sp.product || '' });
+  return `
+    <h3 class="sub-head">${esc(t('detail.printing'))}<small>${esc(src)}</small></h3>
+    <div class="det-specs">
+      ${sp.extruder != null ? `<span class="spec"><i>${esc(t('detail.nozzle'))}</i><b>${esc(temp(sp.extruder))}</b></span>` : ''}
+      ${sp.bed != null ? `<span class="spec"><i>${esc(t('detail.bed'))}</i><b>${esc(temp(sp.bed))}</b></span>` : ''}
+      ${sp.density != null ? `<span class="spec"><i>${esc(t('detail.density'))}</i><b>${
+        sp.density.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} g/cm³</b></span>` : ''}
+    </div>`;
+}
 async function openDetail(f) {
   if (!f) return;
   S.detailTarget = f.id;
@@ -508,6 +549,12 @@ async function openDetail(f) {
         <div class="bar"><i style="width:${Math.min(100, fil.pct)}%;background:${col}"></i></div>
       </div>
     </div>
+
+    ${specsBlock(d.specs, fil)}
+    ${fil.price ? `<div class="det-price">
+      <span class="spec"><i>${esc(t('detail.price'))}</i><b>${esc(money(fil.price))}</b></span>
+      <span class="spec"><i>${esc(t('detail.perKg'))}</i><b>${esc(money(fil.price_per_g * 1000))}</b></span>
+    </div>` : ''}
 
     <h3 class="sub-head">${esc(t('detail.rolls'))}</h3>
     ${d.rolls.length ? `<div class="det-rolls">${d.rolls.map((r) => `
@@ -552,6 +599,8 @@ function renderSpares() {
       <select class="sp-brand">${brandOptions(s.brand)}</select>
       <select class="sp-type">${typeOptions(s.spool_type)}</select>
       <input type="number" class="sp-weight" min="1" step="10" value="${s.weight}">
+      <input type="number" class="sp-price" min="0" step="0.01" value="${s.price || ''}"
+             placeholder="${esc(t('spares.price'))}">
       <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>
     </div>`).join('')
     : `<div class="spares-empty">${esc(t('spares.empty'))}</div>`;
@@ -565,11 +614,13 @@ function renderSpares() {
         brand: sel.value === OTHER ? (prompt(t('brand.otherPh')) || '') : sel.value,
         spool_type: row.querySelector('.sp-type').value,
         weight: Number(row.querySelector('.sp-weight').value) || 1000,
+        price: Number(row.querySelector('.sp-price').value) || 0,
       });
       await reload();
     };
     row.querySelector('.sp-brand').onchange = save;
     row.querySelector('.sp-type').onchange = save;
+    row.querySelector('.sp-price').onchange = save;
     row.querySelector('.sp-weight').onchange = save;
     row.querySelector('button').onclick = async () => {
       await call('delete_spare', sid);
@@ -594,12 +645,16 @@ function filteredPrints() {
 
 function renderHistory() {
   const list = filteredPrints();
+  // the cost column only earns its space once something has a price
+  const showCost = !!S.stats.has_prices;
+  $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
     <tr>
       <td class="date">${fdate(p.date)}</td>
       <td class="proj" title="${esc(p.notes)}">${esc(p.project)}${failTag(p)}</td>
       <td><div class="fchips">${p.items.map(chip).join('')}</div></td>
       <td class="total right">${g(p.total)} g</td>
+      <td class="cost right">${p.cost ? esc(money(p.cost)) : ''}</td>
       <td>
         <div class="row-actions">
           ${p.url ? `<button class="icon-btn" data-plink="${p.id}"
@@ -618,6 +673,8 @@ function renderHistory() {
   em.innerHTML = S.prints.length
     ? `<b>${esc(t('his.noResults'))}</b>${esc(t('his.noResultsSub'))}`
     : `<b>${esc(t('his.empty'))}</b>${esc(t('his.emptySub'))}`;
+
+  $$('#historyTable td.cost').forEach((el) => { el.hidden = !showCost; });
 
   const find = (id) => S.prints.find((p) => p.id == id);
   $$('[data-pedit]').forEach((b) => { b.onclick = () => openPrint(find(b.dataset.pedit)); });
@@ -727,6 +784,11 @@ function renderStats() {
       foot: `${t('kpi.wastedFoot', { n: st.failed_prints || 0 })} · ${t('kpi.wastedPct', { p: g(pct) })}`,
       hint: t('kpi.hint.wasted'),
       action: () => gotoHistory({ failedOnly: true }) },
+    ...(st.has_prices ? [{
+      label: t('kpi.spent'), value: money(st.total_cost), icon: 'coin',
+      foot: t('kpi.spentFoot', { v: money(st.month_cost) }), hint: t('kpi.hint.spent'),
+      action: () => gotoHistory(),
+    }] : []),
     { label: t('kpi.filaments'), value: String(st.n_filaments || 0), icon: 'palette',
       tone: st.n_low ? 'warn' : 'ok', foot: t('kpi.filamentsFoot', { n: st.n_low || 0 }),
       hint: st.n_low ? t('kpi.hint.low') : t('kpi.hint.inventory'),
@@ -748,6 +810,17 @@ function renderSettings() {
   $('#setLang').innerHTML = Object.entries(LANGS)
     .map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('');
   $('#setLang').value = S.lang;
+  const cur = S.settings.currency || 'EUR';
+  const names = (() => {
+    try { return new Intl.DisplayNames([locale()], { type: 'currency' }); } catch (e) { return null; }
+  })();
+  $('#setCurrency').innerHTML = CURRENCIES.map((c) => {
+    const label = names ? `${c} · ${names.of(c)}` : c;
+    return `<option value="${c}"${c === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  }).join('');
+  $('#setTempUnit').value = S.settings.temp_unit || 'C';
+  $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
+  renderLearned();
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
   $('#dbPath').textContent = S.dbPath || '—';
@@ -786,6 +859,44 @@ function renderSettings() {
     n: S.backups.count || 0, d: S.backups.last || '—' });
 }
 
+/* ---------- what Bambu Studio just sliced ----------
+   Slicing is the moment the grams are known, so that is when the print is
+   offered. Nothing is ever recorded from here: the card opens the normal form
+   filled in, and the user confirms or corrects it. */
+
+async function checkSlices() {
+  if (S.settings.slicer_watch === '0') return;
+  const list = await call('slices', { limit: 1 });
+  if (failed(list) || !list || !list.length) return;
+  // a card already on screen for the same slice must not restart its animation
+  if (S.slice && S.slice.path === list[0].path) return;
+  S.slice = list[0];
+  showSliceCard(S.slice);
+}
+
+function showSliceCard(sl) {
+  const when = new Date(sl.sliced_at);
+  const mins = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
+  $('#sliceWhen').textContent = mins < 1 ? t('slice.justNow')
+    : mins < 60 ? t('slice.minsAgo', { n: mins })
+      : when.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
+  $('#sliceProject').textContent = sl.project || t('slice.untitled');
+  $('#sliceChips').innerHTML = sl.items.map((i) => `
+    <span class="slice-chip">
+      <span class="dot" style="background:${esc(i.hex || '#888')}"></span>
+      ${g(i.grams)} g · ${esc(i.material || '?')}
+    </span>`).join('');
+  show('#sliceCard');
+}
+
+/* "Not now" hides the card but leaves the slice pending, so it comes back next
+   launch. The × says it is dealt with and moves the watermark past it. */
+function hideSliceCard(forget) {
+  hide('#sliceCard');
+  if (forget && S.slice) call('dismiss_slice', { path: S.slice.path });
+  S.slice = null;
+}
+
 /* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
@@ -802,24 +913,57 @@ function openPrint(p) {
   setTimeout(() => $('#pProject').focus(), 60);
 }
 
-function addItemRow(fid = '', grams = '') {
+/* The form as the slicer would fill it in: one row per filament, each with the
+   spool the app believes it was and the option list behind it. */
+function openPrintFromSlice(sl) {
+  openPrint(null);
+  $('#printModalTitle').textContent = t('print.fromSlice');
+  $('#pProject').value = sl.project || '';
+  $('#pItems').innerHTML = '';
+  sl.items.forEach((i) => addItemRow(i.pick || '', i.grams, i));
+  printTotal();
+  hide('#sliceCard');
+  setTimeout(() => {
+    const unsure = $('#pItems .item-row.guess select');
+    (unsure || $('#pProject')).focus();
+  }, 60);
+}
+
+function addItemRow(fid = '', grams = '', slice = null) {
   const opts = S.filaments.filter((f) => !f.archived || f.id == fid)
     .map((f) => `<option value="${f.id}" ${f.id == fid ? 'selected' : ''}>${esc(f.name)} — ${g(f.remaining)} g</option>`)
     .join('');
   const row = document.createElement('div');
   row.className = 'item-row';
+  // a suggestion the app is not sure about is marked as such rather than
+  // dressed up as a decision
+  if (slice && !slice.confident) row.classList.add('guess');
+  if (slice) row.dataset.sig = slice.signature || '';
   row.innerHTML = `
     <select>${fid ? '' : `<option value="">${esc(t('print.pickFilament'))}</option>`}${opts}</select>
     <input type="number" step="0.01" min="0" placeholder="${esc(t('print.grams'))}" value="${grams === '' ? '' : grams}">
-    <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>`;
+    <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>
+    ${slice ? `<small class="item-note">${sliceNote(slice)}</small>` : ''}`;
   row.querySelector('button').onclick = () => {
     row.remove();
     if (!$('#pItems').children.length) addItemRow();
     printTotal();
   };
   row.querySelector('input').oninput = printTotal;
+  // changing the spool by hand is the correction the app learns from
+  if (slice) row.querySelector('select').onchange = () => row.classList.remove('guess');
   $('#pItems').appendChild(row);
   printTotal();
+}
+
+/* Says where the suggestion came from, so an odd one is easy to spot. */
+function sliceNote(i) {
+  // the profile already names the material ("Bambu PLA Matte"), so saying both
+  // would just read as "PLA · Generic PLA"
+  const what = (i.profile ? i.profile.replace(/\s*@.*$/, '') : '') || i.material || '?';
+  return i.confident
+    ? t('slice.sure', { what: esc(what) })
+    : `<b>${esc(t('slice.check'))}</b> ${t('slice.unsure', { what: esc(what) })}`;
 }
 
 function printTotal() {
@@ -843,6 +987,15 @@ async function savePrint() {
     notes: $('#pNotes').value.trim(), failed: $('#pFailed').checked ? 1 : 0, items,
   });
   if (failed(res)) return;
+
+  // The confirmations just given are what make the next identical slice a
+  // certainty instead of a guess.
+  const matches = $$('#pItems .item-row')
+    .filter((r) => r.dataset.sig && r.querySelector('select').value)
+    .map((r) => ({ signature: r.dataset.sig, filament_id: r.querySelector('select').value }));
+  if (matches.length) await call('remember_matches', { matches });
+  if (S.slice) { call('dismiss_slice', { path: S.slice.path }); S.slice = null; }
+
   hide('#printModal');
   await reload();
   toast(S.editingPrint ? t('toast.printUpdated') : t('toast.printSaved'));
@@ -858,17 +1011,41 @@ function openFilament(f) {
   setBrand('#fBrand', '#fBrandOther', f ? (f.roll_brand || '') : '');
   $('#fType').innerHTML = typeOptions(f ? f.roll_type : 'plastic');
   $('#fStock').value = f ? f.stock : 0;
+  $('#fPrice').value = f && f.price ? f.price : '';
   $('#fWeight').value = f ? f.roll_weight : (S.settings.default_spool_g || 1000);
   $('#fOpened').value = f ? (f.roll_opened || todayISO()) : todayISO();
   $('#fNotes').value = f ? f.notes : '';
   $('#fArchived').checked = f ? !!f.archived : false;
   setHex(f ? f.hex : '#8a8f96');
+  loadCatalog(f ? f.hex : '');
   $('#fDelete').hidden = !f;
   show('#filModal');
   setTimeout(() => $(f ? '#fColor' : '#fMaterial').focus(), 60);
 }
 
 function setHex(v) { $('#fHex').value = v; $('#fHexTxt').value = v; }
+
+/* The manufacturer's own colour list, loaded whenever brand or material changes.
+   Picking one writes the exact hex the maker publishes, which is what later lets
+   a colour coming from somewhere else be matched against the inventory. */
+async function loadCatalog(selected) {
+  const sel = $('#fCatalog');
+  const brand = readBrand('#fBrand', '#fBrandOther');
+  const material = $('#fMaterial').value.trim();
+  sel.innerHTML = `<option value="">${esc(t('fil.catalogPick'))}</option>`;
+  sel.disabled = true;
+  if (!brand) return;
+  const list = await call('catalog_colors', { brand, material });
+  if (failed(list) || !list || !list.length) {
+    sel.innerHTML = `<option value="">${esc(t('fil.catalogNone'))}</option>`;
+    return;
+  }
+  sel.innerHTML = `<option value="">${esc(t('fil.catalogPick'))}</option>` +
+    list.map((c) => `<option value="${esc(c.hex)}"${
+      c.hex.toLowerCase() === String(selected || '').toLowerCase() ? ' selected' : ''
+    } data-name="${esc(c.name)}">${esc(c.name)} · ${esc(c.hex)}</option>`).join('');
+  sel.disabled = false;
+}
 
 async function saveFilament() {
   const data = {
@@ -880,6 +1057,7 @@ async function saveFilament() {
     brand: readBrand('#fBrand', '#fBrandOther'),
     spool_type: $('#fType').value,
     stock: Number($('#fStock').value) || 0,
+    price: Number($('#fPrice').value) || 0,
     notes: $('#fNotes').value.trim(),
     archived: $('#fArchived').checked ? 1 : 0,
     roll_weight: Number($('#fWeight').value) || 1000,
@@ -920,6 +1098,8 @@ function openRoll(f, mode = 'new') {
         <label class="field"><span>${esc(t('roll.opened'))}</span>
           <input type="date" id="rOpened" value="${todayISO()}"></label>
       </div>
+      <label class="field"><span>${esc(t('roll.price'))} <i>${esc(t('common.optional'))}</i></span>
+        <input type="number" id="rPrice" min="0" step="0.01" value="${f.price || ''}"></label>
       <div class="form-grid">
         <label class="field"><span>${esc(t('fil.brand'))}</span>
           <select id="rBrand" class="brand-sel">${brandOptions(f.roll_brand || '')}</select>
@@ -986,6 +1166,7 @@ function openRoll(f, mode = 'new') {
     setBrand('#rBrand', '#rBrandOther', sp.brand || '');
     $('#rType').value = sp.spool_type || 'plastic';
     $('#rWeight').value = sp.weight;
+    if (sp.price) $('#rPrice').value = sp.price;
   };
   // the tare in the scale panel follows the chosen brand and type
   const syncTare = () => {
@@ -1005,6 +1186,7 @@ async function saveRoll() {
       id: f.id, weight: Number($('#rWeight').value) || f.roll_weight,
       opened: $('#rOpened').value || todayISO(),
       brand: readBrand('#rBrand', '#rBrandOther'), spool_type: $('#rType').value,
+      price: Number($('#rPrice').value) || 0,
       spare_id: $('#rSpare').value || null,
     });
     if (failed(r)) return;
@@ -1025,6 +1207,31 @@ async function saveRoll() {
   await reload();
 }
 
+/* Every confirmation given on a slice, so a wrong one can be undone. */
+async function renderLearned() {
+  const list = await call('learned_matches');
+  const box = $('#learnedList');
+  if (failed(list) || !list || !list.length) {
+    box.innerHTML = `<p class="muted">${esc(t('set.learnedEmpty'))}</p>`;
+    return;
+  }
+  box.innerHTML = list.map((m) => `
+    <div class="learned-row">
+      <span class="dot" style="background:${esc(m.hex || '#888')}"></span>
+      <b>${esc(m.name)}</b>
+      <span class="learned-sig">${esc(m.signature)}</span>
+      <button class="icon-btn" data-forget="${esc(m.signature)}"
+              title="${esc(t('set.forget'))}">${svg('close')}</button>
+    </div>`).join('');
+  $$('[data-forget]', box).forEach((b) => {
+    b.onclick = async () => {
+      await call('forget_match', b.dataset.forget);
+      renderLearned();
+      toast(t('toast.forgot'));
+    };
+  });
+}
+
 /* ---------- confirmation and modals ---------- */
 function confirmDialog(title, text, fn) {
   $('#cTitle').textContent = title;
@@ -1040,6 +1247,10 @@ function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
   $('#ctaNewPrint').onclick = () => openPrint(null);
+
+  $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);
+  $('#sliceLater').onclick = () => hideSliceCard(false);
+  $('#sliceDismiss').onclick = () => hideSliceCard(true);
 
   $('#invSearch').oninput = (e) => { S.inv.search = e.target.value; renderInventory(); };
   $('#invMaterial').onchange = (e) => { S.inv.material = e.target.value; renderInventory(); };
@@ -1065,7 +1276,15 @@ function wire() {
   $('#failSave').onclick = saveFail;
 
   $('#fSave').onclick = saveFilament;
-  wireBrand('#fBrand', '#fBrandOther');
+  wireBrand('#fBrand', '#fBrandOther', () => loadCatalog($('#fHexTxt').value));
+  $('#fMaterial').onchange = () => loadCatalog($('#fHexTxt').value);
+  $('#fCatalog').onchange = (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (!e.target.value) return;
+    setHex(e.target.value);
+    // the catalogue name is a better colour name than anything typed by hand
+    if (opt && opt.dataset.name) $('#fColor').value = opt.dataset.name;
+  };
   $('#fHex').oninput = (e) => { $('#fHexTxt').value = e.target.value; };
   $('#fHexTxt').oninput = (e) => {
     if (/^#[0-9a-f]{6}$/i.test(e.target.value)) $('#fHex').value = e.target.value;
@@ -1110,6 +1329,9 @@ function wire() {
   $('#saveSettings').onclick = async () => {
     const r = await call('save_settings', {
       lang: $('#setLang').value,
+      temp_unit: $('#setTempUnit').value,
+      currency: $('#setCurrency').value,
+      slicer_watch: $('#setSlicerWatch').checked ? '1' : '0',
       low_threshold_pct: Number($('#setLow').value) || 15,
       default_spool_g: Number($('#setSpool').value) || 1000,
     });
@@ -1190,6 +1412,12 @@ async function boot() {
     setView('inventory');
     toast(t('toast.firstRun'), 'info');
   }
+
+  // Slicing usually happens with this window in the background, so the check
+  // runs on a timer as well as whenever the window is looked at again.
+  checkSlices();
+  S.sliceTimer = setInterval(checkSlices, 45000);
+  window.addEventListener('focus', checkSlices);
 }
 
 if (window.pywebview && window.pywebview.api) boot();

@@ -136,6 +136,7 @@
                   <th data-i18n="his.project">Project</th>
                   <th data-i18n="his.filaments">Filaments</th>
                   <th style="width:100px" class="right" data-i18n="his.total">Total</th>
+                  <th style="width:92px" class="right cost-col" data-i18n="his.cost">Cost</th>
                   <th style="width:112px"></th></tr>
             </thead>
             <tbody></tbody>
@@ -177,6 +178,19 @@
               <small data-i18n="set.langHelp"></small>
             </label>
             <label class="field">
+              <span data-i18n="set.currency">Currency</span>
+              <select id="setCurrency" class="select"></select>
+              <small data-i18n="set.currencyHelp"></small>
+            </label>
+            <label class="field">
+              <span data-i18n="set.tempUnit">Temperature unit</span>
+              <select id="setTempUnit" class="select">
+                <option value="C">°C</option>
+                <option value="F">°F</option>
+              </select>
+              <small data-i18n="set.tempUnitHelp"></small>
+            </label>
+            <label class="field">
               <span data-i18n="set.low">Low spool warning (%)</span>
               <input type="number" id="setLow" min="1" max="90" step="1">
               <small data-i18n="set.lowHelp"></small>
@@ -213,6 +227,19 @@
           <p class="muted dry-help" data-i18n="set.tareHelp"></p>
           <div class="form-grid" id="tareGrid"></div>
           <div class="row-end"><button class="btn primary" id="saveTare" data-i18n="set.tareSave">Save</button></div>
+        </div>
+
+        <div class="card" id="slicerCard">
+          <div class="card-head">
+            <h2 data-i18n="set.slicer">Bambu Studio</h2>
+          </div>
+          <p class="muted dry-help" data-i18n="set.slicerHelp"></p>
+          <label class="toggle"><input type="checkbox" id="setSlicerWatch">
+            <span><span data-i18n="set.slicerWatch">Offer a print after slicing</span>
+              <i class="hint" data-i18n="set.slicerWatchHint"></i></span></label>
+          <h3 class="sub-head" data-i18n="set.learned">Remembered spools</h3>
+          <p class="muted dry-help" data-i18n="set.learnedHelp"></p>
+          <div id="learnedList" class="learned"></div>
         </div>
 
         <div class="card">
@@ -344,6 +371,7 @@
         </label>
         <label class="field"><span data-i18n="fil.hex">On-screen colour</span>
           <div class="color-row"><input type="color" id="fHex"><input type="text" id="fHexTxt" spellcheck="false"></div>
+          <select id="fCatalog" class="cat-sel"></select>
         </label>
       </div>
       <div class="form-grid">
@@ -358,7 +386,10 @@
       <div class="form-grid">
         <label class="field"><span data-i18n="fil.stock">Spare spools</span>
           <input type="number" id="fStock" min="0" step="1" value="0"></label>
-        <div></div>
+        <label class="field"><span><span data-i18n="fil.price">Spool price</span>
+          <i data-i18n="common.optional"></i></span>
+          <input type="number" id="fPrice" min="0" step="0.01" placeholder="0">
+          <small data-i18n="fil.priceHelp"></small></label>
       </div>
       <div class="form-grid">
         <label class="field"><span data-i18n="fil.weight">Current spool weight (g)</span>
@@ -444,9 +475,33 @@
   </div>
 </div>
 
+<!-- Offered when Bambu Studio has sliced something. Nothing is recorded from
+     here: it opens the print form filled in, and the user confirms. -->
+<div id="sliceCard" class="slice-card" hidden>
+  <button class="icon-btn slice-x" id="sliceDismiss" data-i18n-title="slice.dismiss">&times;</button>
+  <div class="slice-head">
+    <span class="slice-badge">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </span>
+    <div>
+      <b data-i18n="slice.title">Just sliced</b>
+      <small id="sliceWhen"></small>
+    </div>
+  </div>
+  <div class="slice-body">
+    <div class="slice-project" id="sliceProject"></div>
+    <div class="slice-chips" id="sliceChips"></div>
+  </div>
+  <div class="slice-foot">
+    <button class="btn ghost sm" id="sliceLater" data-i18n="slice.later">Not now</button>
+    <button class="btn primary sm" id="sliceAdd" data-i18n="slice.add">Log this print</button>
+  </div>
+</div>
+
 <div id="toasts" class="toasts"></div>
 
 <script src="i18n.js"></script>
+<script src="currencies.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

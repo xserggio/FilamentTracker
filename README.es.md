@@ -36,10 +36,19 @@ secarlo bastante más a menudo que el PLA.
   y sus dos repuestos eSUN.
 - **Pesar en vez de estimar.** Pones el rollo en la báscula, escribes lo que marca,
   y la app resta el peso del carrete vacío según la marca y el tipo de bobina.
+- **Temperaturas y densidad.** Boquilla y cama de ese filamento concreto, desde
+  un catálogo de 53 fabricantes y 415 productos que va dentro de la app. Sin
+  conexión, y diciendo si el dato es del producto, de la marca o simplemente el
+  típico de ese plástico.
+- **Precios y coste por impresión.** Opcional. Cada impresión se valora con el
+  rollo que estaba puesto ese día, en cualquiera de las 178 divisas ISO.
 - **Avisos de secado.** Intervalos por material, contados desde la apertura y
   reiniciados cada vez que registras un secado.
 - **Impresiones fallidas.** Marcas una como fallida y corriges los gramos que
   realmente gastó — el material que no llegó a salir vuelve al rollo.
+- **Lee lo que lamina Bambu Studio.** Laminas una placa y un aviso te ofrece
+  apuntar la impresión con los gramos ya puestos y un rollo propuesto por cada
+  color. Tú confirmas; él lo recuerda.
 - **Estadísticas.** Gramos por mes, filamentos más usados, reparto por material,
   proyectos que más consumen y material desperdiciado.
 - **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
@@ -129,6 +138,30 @@ y **Rollo nuevo**.
 Arriba hay filtros: búsqueda por texto, material, orden, *solo bajos*, *con
 repuesto* y *ver archivados*.
 
+### Temperaturas y densidad
+
+La ficha de cada filamento muestra la temperatura de boquilla y de cama, y la
+densidad. No se escriben a mano: salen de un catálogo de **53 fabricantes, 415
+productos y 3531 colores** construido a partir de
+[SpoolmanDB](https://github.com/Donkie/SpoolmanDB) y empaquetado con la app, así
+que nada de esto necesita conexión.
+
+La búsqueda va de lo concreto a lo general, y dice de dónde ha salido el dato:
+
+| Origen | Qué significa |
+|---|---|
+| el producto | el fabricante publica el dato de ese filamento exacto, p. ej. Bambu Lab PLA Matte |
+| la marca | la gama propia de esa marca para ese material |
+| típico | el rango habitual de ese plástico, lo haga quien lo haga |
+
+Así, un rollo al que nunca le pusiste marca sigue mostrando algo útil, y lo dice
+en vez de aparentar que lo sabe. En Ajustes hay un selector **°C / °F**; los datos
+se guardan siempre en Celsius.
+
+Los colores reales de la marca también aparecen en el selector de color: *Bambu
+Lab · PLA Matte* propone los quince mates que vende de verdad en lugar de una
+muestra en blanco.
+
 ### Registrar una impresión
 
 `Nueva impresión` pide fecha, nombre del proyecto, una fila por color con sus
@@ -139,6 +172,40 @@ colores.
 
 En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
 **`!`**, uno de editar y otro de eliminar.
+
+### Después de laminar en Bambu Studio
+
+Al laminar, Bambu Studio escribe la placa en una carpeta suya, y ahí están los
+gramos de cada filamento que va a gastar. Filament Tracker lee esa carpeta y te
+ofrece la impresión en vez de hacerte teclearla:
+
+> **Recién laminado** · chimenea escalada D2.2 — 7,5 g · PLA
+> *Ahora no* · **Apuntar impresión**
+
+**Apuntar impresión** abre el formulario de siempre con el nombre del proyecto,
+los gramos y un rollo ya elegido por cada color. No se registra nada hasta que
+das a Guardar, y antes puedes cambiar lo que quieras.
+
+**El color del laminado no es el rollo que tienes puesto.** Casi siempre eliges un
+perfil porque es el único que existe — no hay Matte en Generic, así que
+seleccionas el de Bambu Lab tengas el rollo que tengas — o cambias el color desde
+la pantalla de la impresora y el laminador no se entera. Por eso la propuesta va
+primero por material y línea de producto (un perfil *Matte* busca un rollo mate),
+y el color solo desempata. La fila de la que no está seguro sale en ámbar con
+*Comprueba el rollo*.
+
+**Aprende.** El rollo que confirmas queda apuntado contra esa combinación exacta
+de material + perfil + color, así que la próxima vez que se lamine lo mismo ya no
+hay nada que adivinar. En Ajustes › Bambu Studio está todo lo aprendido, y lo que
+esté mal se olvida de un clic.
+
+El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* lo esconde y vuelve
+a la siguiente; la **×** descarta ese laminado para siempre. Un laminado que no
+llegaste a imprimir simplemente no se confirma nunca.
+
+Esto lee la carpeta temporal del propio Bambu Studio, que no es una interfaz
+documentada. Si una versión futura la cambia de sitio, el aviso deja de aparecer y
+ya está — no afecta a nada más.
 
 ### Impresiones fallidas
 
@@ -196,6 +263,29 @@ misma marca —Bambu va de 196 a 253 g y eSUN de 161 a 253— porque cambian el 
 entre versiones. Por eso, en cuanto corriges la tara pesando un carrete tuyo, la app
 guarda **tu** número para esa combinación de marca y tipo y lo usa a partir de
 entonces. También se editan a mano en **Ajustes → Tara del carrete por marca**.
+
+### Precios y coste por impresión
+
+Pon el precio de un rollo — en el filamento, en un rollo nuevo o en cada
+repuesto — y el historial gana una columna de **Coste** y las estadísticas una
+tarjeta de **Gastado**. Si no hay ningún precio, no aparece ninguna de las dos: la
+app no enseña columnas de ceros.
+
+Cada impresión se valora con **el rollo que estaba puesto ese día**, no con el
+precio de hoy. Volver a comprar el mismo color a otro precio no puede reescribir
+lo que costó el mes pasado, así que sustituir una bobina de 21,99 por otra de
+34,99 deja intactas las impresiones antiguas y solo cobra la tarifa nueva de ahí
+en adelante.
+
+La divisa se elige en Ajustes y están **los 178 códigos ISO 4217 activos**, no
+solo las principales. El nombre y el símbolo los pone el sistema, así que la
+lista se lee «PLN · esloti polaco» en español y «PLN · Polish zloty» en inglés, y
+el mismo número sale como 1.234,50 €, US$1,234.50 o 1235 JPY. No se convierte
+nada ni se consulta ningún tipo de cambio: los precios se muestran en la moneda en
+la que los metiste.
+
+En estadísticas está además el valor de lo que tienes en la estantería: lo que
+queda en los rollos abiertos más los repuestos.
 
 ### Estadísticas
 
@@ -264,19 +354,24 @@ directorio temporal y desaparecería al cerrar.
 ```
 app.py         ventana pywebview y puente con la interfaz
 core.py        esquema SQLite, rutas, cálculo de restantes y estadísticas
+catalog.py     catálogo de fabricantes, temperaturas y comparación de color
+catalog.json   53 fabricantes, 415 productos, 3531 colores
 importer.py    lectura del Excel
+slicer.py      lee las placas que ha laminado Bambu Studio
 build.ps1      empaquetado con PyInstaller
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo en navy, negro y blanco (svg, png, ico)
-tools/         generador de base de datos de ejemplo y script de capturas
+tools/         generador del catálogo, base de datos de ejemplo y capturas
 data/          tu base de datos (no está en el repo)
 ```
 
 ## Créditos
 
-Los pesos de carretes vacíos vienen de [SpoolmanDB](https://github.com/Donkie/SpoolmanDB)
-y [The Empty Spool](https://theemptyspool.cc/), ambos mantenidos por la comunidad.
-Construido sobre [pywebview](https://pywebview.flowrl.com/).
+Los pesos de carretes vacíos, las temperaturas de impresión, las densidades y el
+catálogo de colores de cada marca vienen de
+[SpoolmanDB](https://github.com/Donkie/SpoolmanDB) (MIT), contrastados con
+[The Empty Spool](https://theemptyspool.cc/). Los dos están mantenidos por la
+comunidad. Construido sobre [pywebview](https://pywebview.flowrl.com/).
 
 ## Licencia
 

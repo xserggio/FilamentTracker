@@ -529,3 +529,67 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 }
 .tare-pair input:focus{border-color:var(--accent)}
 #tareGrid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+
+/* manufacturer colour list, under the picker in the filament dialog */
+.cat-sel{
+  margin-top:7px;padding:7px 10px;border-radius:var(--r-sm);border:1px solid var(--line);
+  background:var(--bg-2);outline:none;width:100%;cursor:pointer;font-size:12.5px;
+  color:var(--muted);
+}
+.cat-sel:focus{border-color:var(--accent)}
+.cat-sel:disabled{opacity:.5;cursor:default}
+
+/* printing settings on the detail sheet */
+.det-specs{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.spec{
+  display:flex;align-items:baseline;gap:6px;padding:7px 11px;border-radius:9px;
+  background:var(--bg-2);border:1px solid var(--line-soft);
+}
+.spec i{font-style:normal;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted-2)}
+.spec b{font-size:13.5px;font-weight:620;font-variant-numeric:tabular-nums}
+.spec-src{font-size:11.5px;color:var(--muted-2)}
+
+/* cost only earns a column once something has a price */
+.cost-col{color:var(--muted)}
+.table td.cost{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+.det-price{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:2px}
+
+/* the spares row gained a price, so it needs a fifth column */
+.spare-row{grid-template-columns:1fr 96px 84px 84px 32px}
+.spare-row .sp-price{text-align:right}
+
+/* the slice offer: present enough to notice, quiet enough to ignore */
+.slice-card{position:fixed;right:18px;bottom:18px;z-index:60;width:335px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:14px 15px 12px;
+  animation:sliceIn .28s cubic-bezier(.2,.8,.3,1)}
+@keyframes sliceIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.slice-x{position:absolute;top:7px;right:7px;font-size:17px;line-height:1}
+.slice-head{display:flex;gap:10px;align-items:center;margin-bottom:9px}
+.slice-head b{display:block;font-size:13.5px}
+.slice-head small{color:var(--muted);font-size:11.5px}
+.slice-badge{width:31px;height:31px;border-radius:9px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);flex:none}
+.slice-badge .ic{width:16px;height:16px}
+.slice-project{font-weight:600;font-size:13px;margin-bottom:7px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slice-chips{display:flex;gap:6px;flex-wrap:wrap}
+.slice-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;
+  border:1px solid var(--line);border-radius:999px;padding:2px 8px 2px 4px;color:var(--muted)}
+.slice-chip .dot{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.18)}
+.slice-foot{display:flex;justify-content:flex-end;gap:7px;margin-top:11px}
+
+/* a row the app is unsure about says so, instead of pretending */
+.item-row.guess select{border-color:rgba(240,180,66,.42);background:rgba(240,180,66,.08)}
+.item-note{grid-column:1/-1;font-size:11.5px;color:var(--muted);margin:-3px 0 3px 2px}
+.item-note b{color:var(--text);font-weight:600}
+
+#slicerCard .sub-head{margin-top:16px}
+#slicerCard .sub-head + .dry-help{margin-top:6px}
+.learned{display:flex;flex-direction:column;gap:6px}
+.learned-row{display:flex;align-items:center;gap:9px;padding:7px 9px;
+  border:1px solid var(--line);border-radius:10px;font-size:12.5px}
+.learned-row .dot{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.18);flex:none}
+.learned-sig{color:var(--muted);font-family:ui-monospace,Consolas,monospace;font-size:11px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.learned-row b{flex:none}

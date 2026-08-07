@@ -11,6 +11,8 @@ import webview
 
 from core import (APP_DIR, DB_PATH, DRY_DAYS, SPOOL_TYPES, Store,
                   clean_url, detect_lang, guess_hex)
+import catalog
+import slicer
 from importer import import_excel
 
 WEB_DIR = os.path.join(APP_DIR, "web")
@@ -127,6 +129,7 @@ class Api:
                 spare_id=int(data["spare_id"]) if data.get("spare_id") else None,
                 from_stock=bool(data.get("from_stock", False)),
                 spool_type=data.get("spool_type"),
+                price=data.get("price"),
             )
             return ok()
         except Exception as e:
@@ -136,7 +139,7 @@ class Api:
         try:
             sid = self._store.add_spare(
                 int(data["id"]), brand=data.get("brand"), weight=data.get("weight"),
-                spool_type=data.get("spool_type")
+                spool_type=data.get("spool_type"), price=data.get("price")
             )
             return ok({"id": sid})
         except Exception as e:
@@ -146,7 +149,7 @@ class Api:
         try:
             self._store.update_spare(
                 int(data["spare_id"]), brand=data.get("brand"), weight=data.get("weight"),
-                spool_type=data.get("spool_type")
+                spool_type=data.get("spool_type"), price=data.get("price")
             )
             return ok()
         except Exception as e:
@@ -192,6 +195,7 @@ class Api:
                 "filament": fil,
                 "rolls": self._store.roll_history(fid),
                 "prints": self._store.filament_prints(fid),
+                "specs": catalog.specs(fil["roll_brand"], fil["material"], fil["name"]),
             })
         except Exception as e:
             traceback.print_exc()
@@ -215,6 +219,98 @@ class Api:
         try:
             os.startfile(self._store.backup_info()["dir"])
             return ok()
+        except Exception as e:
+            return err(e)
+
+    def catalog_colors(self, data):
+        """The colours this manufacturer actually sells, for the colour picker."""
+        try:
+            return ok(catalog.colors(data.get("brand", ""), data.get("material")))
+        except Exception as e:
+            return err(e)
+
+    def filament_specs(self, data):
+        """Printing temperatures and density, saying where each number came from."""
+        try:
+            return ok(catalog.specs(data.get("brand"), data.get("material"),
+                                    data.get("name", "")))
+        except Exception as e:
+            return err(e)
+
+    def match_color(self, data):
+        """Rank the inventory by how close each spool looks to a colour."""
+        try:
+            res = catalog.match_color(data.get("hex", ""), self._store.filaments(),
+                                      data.get("material"))
+            return ok([{"id": r["filament"]["id"], "name": r["filament"]["name"],
+                        "hex": r["filament"]["hex"], "delta": r["delta"],
+                        "same_material": r["same_material"]} for r in res[:8]])
+        except Exception as e:
+            return err(e)
+
+    # ---------- what Bambu Studio just sliced ----------
+
+    def slices(self, data=None):
+        """Slices worth offering, each with a suggested spool per filament.
+
+        Anything already offered is filtered out by timestamp, so dismissing a
+        slice makes it stay dismissed and re-slicing the same plate offers it
+        again.
+        """
+        data = data or {}
+        try:
+            s = self._store
+            if s.get_settings().get("slicer_watch", "1") != "1":
+                return ok([])
+            try:
+                since = float(s.get_settings().get("slicer_seen") or 0)
+            except ValueError:
+                since = 0.0
+            if data.get("all"):
+                since = 0.0
+            fils = s.filaments()
+            out = []
+            for sl in slicer.latest_slices(limit=int(data.get("limit") or 3), since=since):
+                for item in sl["items"]:
+                    sig = slicer.signature(item)
+                    item["signature"] = sig
+                    item.update(slicer.candidates(item, fils, s.recall_match(sig)))
+                out.append(sl)
+            return ok(out)
+        except Exception as e:
+            traceback.print_exc()
+            return err(e)
+
+    def dismiss_slice(self, data):
+        """Remember how far we have looked, so this slice is not offered again."""
+        try:
+            path = data.get("path") or ""
+            stamp = os.path.getmtime(path) if path and os.path.exists(path) else 0
+            self._store.set_settings({"slicer_seen": str(stamp)})
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def remember_matches(self, data):
+        """Store the confirmations the user just gave on a slice."""
+        try:
+            for m in data.get("matches") or []:
+                if m.get("signature") and m.get("filament_id"):
+                    self._store.remember_match(m["signature"], int(m["filament_id"]))
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def forget_match(self, signature):
+        try:
+            self._store.forget_match(signature or "")
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def learned_matches(self):
+        try:
+            return ok(self._store.learned_matches())
         except Exception as e:
             return err(e)
 

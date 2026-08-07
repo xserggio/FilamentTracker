@@ -93,6 +93,18 @@ CREATE TABLE IF NOT EXISTS settings (
     key           TEXT PRIMARY KEY,
     value         TEXT NOT NULL
 );
+
+-- What the slicer wrote -> which spool it actually was. The colour in a sliced
+-- file is whatever was picked on screen or inherited from the AMS slot, so it
+-- rarely matches the real spool. Rather than guess forever, every confirmation
+-- is remembered here and the next identical slice needs no guessing.
+CREATE TABLE IF NOT EXISTS slicer_map (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    signature     TEXT NOT NULL UNIQUE,
+    filament_id   INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
+    hits          INTEGER NOT NULL DEFAULT 1,
+    last_used     TEXT NOT NULL DEFAULT ''
+);
 """
 
 DEFAULT_SETTINGS = {
@@ -100,6 +112,9 @@ DEFAULT_SETTINGS = {
     "default_spool_g": "1000",     # default weight of a new roll
     "warn_no_stock": "1",          # warn when a roll runs low with no spare
     "lang": "",                    # interface language ("" = detect from the OS)
+    "currency": "EUR",             # what prices are entered in; never converted
+    "slicer_watch": "1",           # offer a print when Bambu Studio slices one
+    "slicer_seen": "0",            # newest slice already offered (epoch seconds)
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
@@ -340,13 +355,20 @@ class Store:
         if "tare" not in rcols:
             self.db.execute("ALTER TABLE rolls ADD COLUMN tare REAL NOT NULL DEFAULT 0")
             self.db.commit()
+        if "price" not in rcols:
+            self.db.execute("ALTER TABLE rolls ADD COLUMN price REAL NOT NULL DEFAULT 0")
+            self.db.commit()
         if "spool_type" not in rcols:
             self.db.execute(
                 "ALTER TABLE rolls ADD COLUMN spool_type TEXT NOT NULL DEFAULT 'plastic'")
             self.db.commit()
-        if "spool_type" not in {r["name"] for r in self.db.execute("PRAGMA table_info(spares)")}:
+        scols = {r["name"] for r in self.db.execute("PRAGMA table_info(spares)")}
+        if "spool_type" not in scols:
             self.db.execute(
                 "ALTER TABLE spares ADD COLUMN spool_type TEXT NOT NULL DEFAULT 'plastic'")
+            self.db.commit()
+        if "price" not in scols:
+            self.db.execute("ALTER TABLE spares ADD COLUMN price REAL NOT NULL DEFAULT 0")
             self.db.commit()
 
         pcols = {r["name"] for r in self.db.execute("PRAGMA table_info(prints)")}
@@ -445,9 +467,10 @@ class Store:
 
             spares = [
                 {"id": s["id"], "brand": s["brand"], "weight": round(float(s["weight"]), 2),
-                 "spool_type": s["spool_type"] or "plastic"}
+                 "spool_type": s["spool_type"] or "plastic",
+                 "price": round(float(s["price"]), 2)}
                 for s in self.db.execute(
-                    "SELECT id, brand, weight, spool_type FROM spares "
+                    "SELECT id, brand, weight, spool_type, price FROM spares "
                     "WHERE filament_id=? ORDER BY id",
                     (r["id"],),
                 )
@@ -472,6 +495,9 @@ class Store:
                     "roll_brand": roll_brand,
                     "dried_at": dried,
                     "tare": round(float(roll["tare"]), 1) if roll else 0.0,
+                    "price": round(float(roll["price"]), 2) if roll else 0.0,
+                    "price_per_g": round(float(roll["price"]) / weight, 5)
+                    if roll and roll["price"] and weight else 0.0,
                     "roll_type": roll_type,
                     "tare_hint": round(self.tare_for(roll_brand, roll_type), 1),
                     "days_open": days_since(opened),
@@ -518,14 +544,15 @@ class Store:
         weight = float(data.get("roll_weight") or self.get_settings().get("default_spool_g", 1000))
         opened = data.get("roll_opened") or today()
         stype = norm_type(data.get("spool_type"))
+        price = float(data.get("price") or 0)
         self.db.execute(
-            "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, spool_type) "
-            "VALUES(?,?,?,0,?,?,?)",
-            (fid, opened, weight, brand, "rollo inicial", stype),
+            "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, "
+            "spool_type, price) VALUES(?,?,?,0,?,?,?,?)",
+            (fid, opened, weight, brand, "first roll", stype, price),
         )
         self.db.commit()
         for _ in range(int(data.get("stock") or 0)):
-            self.add_spare(fid, brand=brand, weight=weight, spool_type=stype)
+            self.add_spare(fid, brand=brand, weight=weight, spool_type=stype, price=price)
         return fid
 
     def update_filament(self, fid: int, data: dict):
@@ -560,9 +587,11 @@ class Store:
             weight = float(data.get("roll_weight", roll["weight"]) or roll["weight"])
             opened = data.get("roll_opened") or roll["opened_at"]
             self.db.execute(
-                "UPDATE rolls SET weight=?, opened_at=?, brand=?, spool_type=? WHERE id=?",
+                "UPDATE rolls SET weight=?, opened_at=?, brand=?, spool_type=?, price=? "
+                "WHERE id=?",
                 (weight, opened, brand,
-                 norm_type(data.get("spool_type", roll["spool_type"])), roll["id"]),
+                 norm_type(data.get("spool_type", roll["spool_type"])),
+                 float(data.get("price", roll["price"]) or 0), roll["id"]),
             )
         self.db.commit()
         if "stock" in data:
@@ -582,32 +611,37 @@ class Store:
         return r["brand"] if r else ""
 
     def add_spare(self, fid: int, brand: str = None, weight: float = None,
-                  spool_type: str = None) -> int:
+                  spool_type: str = None, price: float = None) -> int:
         if brand is None:
             brand = self.default_brand(fid)
         if weight is None:
             weight = float(self.get_settings().get("default_spool_g", 1000))
+        roll = self.current_roll(fid)
         if spool_type is None:
-            roll = self.current_roll(fid)
             spool_type = (roll["spool_type"] if roll else "plastic") or "plastic"
+        if price is None:
+            # a replacement usually costs what the last one did
+            price = float(roll["price"]) if roll else 0.0
         cur = self.db.execute(
-            "INSERT INTO spares(filament_id, brand, weight, added_at, spool_type) "
-            "VALUES(?,?,?,?,?)",
-            (fid, (brand or "").strip(), float(weight), today(), norm_type(spool_type)),
+            "INSERT INTO spares(filament_id, brand, weight, added_at, spool_type, price) "
+            "VALUES(?,?,?,?,?,?)",
+            (fid, (brand or "").strip(), float(weight), today(),
+             norm_type(spool_type), float(price or 0)),
         )
         self.db.commit()
         return cur.lastrowid
 
     def update_spare(self, sid: int, brand: str = None, weight: float = None,
-                     spool_type: str = None):
+                     spool_type: str = None, price: float = None):
         cur = self.db.execute("SELECT * FROM spares WHERE id=?", (sid,)).fetchone()
         if cur is None:
             raise ValueError("That spare no longer exists.")
         self.db.execute(
-            "UPDATE spares SET brand=?, weight=?, spool_type=? WHERE id=?",
+            "UPDATE spares SET brand=?, weight=?, spool_type=?, price=? WHERE id=?",
             ((brand if brand is not None else cur["brand"]).strip(),
              float(weight if weight is not None else cur["weight"]),
-             norm_type(spool_type if spool_type is not None else cur["spool_type"]), sid),
+             norm_type(spool_type if spool_type is not None else cur["spool_type"]),
+             float(price if price is not None else cur["price"]), sid),
         )
         self.db.commit()
 
@@ -633,7 +667,7 @@ class Store:
 
     def new_roll(self, fid: int, weight: float = None, opened: str = None,
                  brand: str = None, spare_id: int = None, from_stock: bool = False,
-                 spool_type: str = None):
+                 spool_type: str = None, price: float = None):
         """Fits a new roll: usage is counted from its opening date onwards.
 
         If a spare is given, the roll inherits its brand and weight (which may
@@ -659,12 +693,14 @@ class Store:
             else:
                 prev = self.current_roll(fid)
                 spool_type = prev["spool_type"] if prev else "plastic"
+        if price is None:
+            price = float(spare["price"]) if spare else 0.0
         opened = opened or today()
 
         self.db.execute(
-            "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, spool_type) "
-            "VALUES(?,?,?,0,?,'',?)",
-            (fid, opened, float(weight), brand, norm_type(spool_type)),
+            "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, "
+            "spool_type, price) VALUES(?,?,?,0,?,'',?,?)",
+            (fid, opened, float(weight), brand, norm_type(spool_type), float(price or 0)),
         )
         # the newly fitted roll's brand becomes the default suggestion
         self.db.execute("UPDATE filaments SET brand=? WHERE id=?", (brand, fid))
@@ -779,6 +815,54 @@ class Store:
             out.append(d)
         return out
 
+    # ---------- cost ----------
+
+    def _price_index(self) -> dict:
+        """Price per gram of every roll, with the window it was fitted for.
+
+        A print is costed with the roll that was on the printer that day, not
+        with today's price: replacing a spool at a different price must not
+        rewrite what last month cost.
+        """
+        index = {}
+        for r in self.db.execute(
+            "SELECT filament_id, opened_at, weight, price FROM rolls "
+            "ORDER BY filament_id, opened_at, id"
+        ):
+            index.setdefault(r["filament_id"], []).append(
+                (r["opened_at"], float(r["price"]) / float(r["weight"])
+                 if r["price"] and r["weight"] else 0.0)
+            )
+        return index
+
+    def _cost_of(self, index: dict, fid: int, when: str, grams: float) -> float:
+        rolls = index.get(fid)
+        if not rolls:
+            return 0.0
+        per_g = 0.0
+        for opened, rate in rolls:          # rolls come in chronological order
+            if opened <= when:
+                per_g = rate
+            else:
+                break
+        if per_g == 0.0:                    # printed before any priced roll
+            per_g = next((r for _, r in reversed(rolls) if r), 0.0)
+        return grams * per_g
+
+    def print_costs(self) -> dict:
+        """Cost of every print, by id. Empty while nothing has a price."""
+        index = self._price_index()
+        if not any(rate for rolls in index.values() for _, rate in rolls):
+            return {}
+        out = {}
+        for r in self.db.execute(
+            "SELECT p.id, p.date, pi.filament_id, pi.grams FROM prints p "
+            "JOIN print_items pi ON pi.print_id = p.id"
+        ):
+            out[r["id"]] = out.get(r["id"], 0.0) + self._cost_of(
+                index, r["filament_id"], r["date"], float(r["grams"]))
+        return {k: round(v, 4) for k, v in out.items()}
+
     def filament_prints(self, fid: int) -> list:
         """Prints this filament appears in, with their grams."""
         rows = self.db.execute(
@@ -793,6 +877,38 @@ class Store:
              "grams": round(float(r["grams"]), 2)}
             for r in rows
         ]
+
+    # ---------- what the slicer said -> which spool it was ----------
+
+    def remember_match(self, signature: str, fid: int):
+        """Learn a confirmation so the same slice never has to be guessed twice."""
+        sig = (signature or "").strip()
+        if not sig:
+            return
+        self.db.execute(
+            "INSERT INTO slicer_map(signature, filament_id, hits, last_used) "
+            "VALUES(?,?,1,?) ON CONFLICT(signature) DO UPDATE SET "
+            "filament_id=excluded.filament_id, hits=hits+1, last_used=excluded.last_used",
+            (sig, int(fid), today()),
+        )
+        self.db.commit()
+
+    def recall_match(self, signature: str):
+        r = self.db.execute(
+            "SELECT filament_id FROM slicer_map WHERE signature=?",
+            ((signature or "").strip(),)
+        ).fetchone()
+        return r["filament_id"] if r else None
+
+    def forget_match(self, signature: str):
+        self.db.execute("DELETE FROM slicer_map WHERE signature=?", (signature,))
+        self.db.commit()
+
+    def learned_matches(self) -> list:
+        return [dict(r) for r in self.db.execute(
+            "SELECT m.signature, m.hits, m.last_used, f.id, f.name, f.hex "
+            "FROM slicer_map m JOIN filaments f ON f.id = m.filament_id "
+            "ORDER BY m.hits DESC, m.last_used DESC")]
 
     # ---------- backups ----------
 
@@ -951,12 +1067,14 @@ class Store:
                         "grams": round(float(it["grams"]), 2),
                     }
                 )
+        costs = self.print_costs()
         out = []
         for r in rows:
             items = items_by_print.get(r["id"], [])
             out.append(
                 {
                     "id": r["id"],
+                    "cost": round(costs.get(r["id"], 0.0), 2),
                     "date": r["date"],
                     "project": r["project"],
                     "notes": r["notes"],
@@ -1079,6 +1197,9 @@ class Store:
 
         fils = self.filaments()
         month = date.today().strftime("%Y-%m")
+        costs = self.print_costs()
+        dates = {r["id"]: r["date"] for r in db.execute("SELECT id, date FROM prints")}
+        failed_ids = {r["id"] for r in db.execute("SELECT id FROM prints WHERE failed = 1")}
         this_month = next((m for m in by_month if m["month"] == month), {"grams": 0, "prints": 0})
 
         return {
@@ -1090,6 +1211,14 @@ class Store:
             "total_prints": tot["n"] or 0,
             "total_grams": round(tot["g"] or 0, 2),
             "failed_prints": bad["n"] or 0,
+            "has_prices": bool(costs),
+            "total_cost": round(sum(costs.values()), 2),
+            "month_cost": round(sum(c for pid, c in costs.items()
+                                    if dates.get(pid, "").startswith(month)), 2),
+            "failed_cost": round(sum(costs.get(pid, 0.0) for pid in failed_ids), 2),
+            "stock_value": round(sum(
+                f["remaining"] * f["price_per_g"]
+                + sum(sp["price"] for sp in f["spares"]) for f in fils), 2),
             "failed_grams": round(bad["g"] or 0, 2),
             "worst_failures": worst_fail,
             "n_dry": sum(1 for f in fils if f["needs_dry"] and not f["archived"]),
