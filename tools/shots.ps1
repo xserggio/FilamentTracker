@@ -10,7 +10,8 @@ param([string]$OutDir = "docs")
 Set-Location (Split-Path $PSScriptRoot -Parent)
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 
-py -c "from core import Store; Store('data/filaments.db').set_settings({'lang':'en','slicer_watch':'0','currency':'EUR'})"
+py -c "from core import Store; Store('data/filaments.db').set_settings({'lang':'en','slicer_watch':'0','slicer_dir':'','currency':'EUR'})"
+py tools\make_demo_slice.py data\_demo_slices
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
@@ -23,13 +24,18 @@ public class Shot {
 }
 '@
 
-# La ficha no es una vista, es un modal: se abre por su filamento.
+# La ficha no es una vista, es un modal: se abre por su filamento. Y las dos
+# ultimas necesitan el vigilante encendido sobre el laminado de ejemplo, que
+# `db` prepara antes de arrancar la ventana.
+$WATCH = "{'slicer_watch':'1','slicer_dir':'data/_demo_slices','slicer_seen':'0'}"
 $steps = @(
   @{ name = "dashboard"; js = "setView('dashboard');" },
   @{ name = "inventory"; js = "setView('inventory');" },
   @{ name = "history";   js = "setView('history');" },
   @{ name = "stats";     js = "setView('stats');" },
-  @{ name = "detail";    js = "setView('inventory'); setTimeout(() => openDetail(S.filaments.find((f) => f.name === 'PETG - black')), 900);" }
+  @{ name = "detail";    js = "setView('inventory'); setTimeout(() => openDetail(S.filaments.find((f) => f.name === 'PETG - black')), 900);" },
+  @{ name = "slice";     js = "setView('dashboard');"; db = $WATCH },
+  @{ name = "sliceform"; js = "setView('dashboard'); setTimeout(() => document.getElementById('sliceAdd').click(), 6000);"; db = $WATCH }
 )
 
 Copy-Item "web\app.js" "web\_app.js.bak" -Force
@@ -38,13 +44,15 @@ foreach ($s in $steps) {
     Get-Process -EA SilentlyContinue |
         Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
     Copy-Item "web\_app.js.bak" "web\app.js" -Force
+    if ($s.db) { py -c "from core import Store; Store('data/filaments.db').set_settings($($s.db))" }
     Add-Content "web\app.js" "`nwindow.addEventListener('load', () => setTimeout(() => { try { $($s.js) } catch(e){} }, 1200));"
     Start-Sleep -Milliseconds 700
     # Se guarda el proceso que arrancamos: buscar por titulo engancharia cualquier
     # otra instancia abierta -- por ejemplo el .exe compilado, con datos reales.
     $proc = Start-Process -FilePath "pythonw" -ArgumentList "app.py" `
         -WorkingDirectory (Get-Location) -PassThru
-    Start-Sleep -Seconds 14
+    # el aviso del laminador llega despues del arranque, asi que esos dos esperan mas
+    Start-Sleep -Seconds $(if ($s.db) { 24 } else { 14 })
 
     $p = Get-Process -Id $proc.Id -EA SilentlyContinue
     if (-not $p -or -not $p.MainWindowHandle -or $p.MainWindowHandle -eq 0) {
@@ -62,5 +70,6 @@ foreach ($s in $steps) {
 
 Copy-Item "web\_app.js.bak" "web\app.js" -Force
 Remove-Item "web\_app.js.bak" -Force
+py -c "from core import Store; Store('data/filaments.db').set_settings({'slicer_watch':'0','slicer_dir':''})"
 Get-Process -EA SilentlyContinue |
     Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
