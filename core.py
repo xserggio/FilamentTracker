@@ -100,6 +100,7 @@ DEFAULT_SETTINGS = {
     "default_spool_g": "1000",     # default weight of a new roll
     "warn_no_stock": "1",          # warn when a roll runs low with no spare
     "lang": "",                    # interface language ("" = detect from the OS)
+    "temp_unit": "C",              # C or F, presentation only
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
