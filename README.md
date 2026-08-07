@@ -56,7 +56,7 @@ needs drying more often than PLA.
 
 ## Download
 
-**1.** Download **`Filament Tracker.exe`** from the
+**1.** Download **`FilamentTracker.exe`** from the
 [latest release](../../releases/latest).
 
 **2.** Put it wherever you like — Desktop, Documents, a USB stick.
