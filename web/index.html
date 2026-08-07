@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Filament Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app" class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <!-- Benchy vectorizado del logo original -->
+        <svg viewBox="0 18.4 200 163.2" aria-hidden="true">
+          <path fill="currentColor" fill-rule="evenodd" d="M19.06 181.01C17.1 180.59 17.09 180.59 14.1 174.93C8.37 164.08 6.02 159.45 4.66 156.32C2.87 152.19 2.84 152.13 2.08 151.66C0.44 150.65 0.38 150.52 0.38 147.9C0.38 145.77 0.42 145.49 0.79 145.02L1.2 144.5L3.92 144.63C7.2 144.8 7.11 144.87 6.39 142.37C6.11 141.41 5.89 140.45 5.89 140.22C5.89 139.62 6.72 139.21 11.02 137.7C16.26 135.87 16.23 135.88 16.8 136.25C17.29 136.58 17.27 136.51 18.77 141.86C19.2 143.37 19.65 144.67 19.79 144.76C20.15 144.98 30.21 144.92 35.8 144.66L40.55 144.44L40.61 143.74C40.64 143.35 40.53 141.21 40.36 138.99C40.2 136.77 40.01 133.24 39.96 131.15C39.84 126.77 39.96 126.33 41.35 125.94C41.83 125.81 47.48 125.74 58.24 125.74C77.25 125.74 75.33 126.01 75.28 123.33C75.26 122.41 75.03 116.61 74.76 110.45C74.49 104.28 74.18 97.23 74.07 94.78C73.96 92.32 73.75 87.58 73.6 84.24C73.45 80.89 73.19 75.08 73.03 71.32C72.86 67.56 72.69 64.12 72.63 63.68C72.51 62.68 71.8 61.8 70.98 61.62C70.12 61.44 69.37 61.03 69.15 60.62C68.98 60.3 67.92 54.47 67.67 52.5C67.44 50.7 67.98 50.46 73.42 49.95C76.65 49.64 77.86 49.46 78.11 49.24C78.42 48.97 78.44 48.25 78.44 39.3C78.44 28.89 78.49 29.4 77.46 28.85C76.7 28.45 76.54 27.59 76.54 23.83C76.54 19.99 76.66 19.45 77.58 19.03C78.29 18.71 97.58 18.71 98.3 19.03C99.22 19.45 99.34 19.99 99.34 23.8C99.34 27.82 99.22 28.32 98.17 28.98L97.44 29.44L97.44 37.94C97.44 42.62 97.49 46.63 97.56 46.87C97.73 47.51 98.14 47.53 102.28 47.11C149.09 42.28 144.97 42.62 145.85 43.45C146.38 43.95 146.43 44.13 146.9 47.48C147.66 52.95 147.61 53.21 145.41 53.94C143.86 54.45 143.84 54.48 143.6 56.51C143.25 59.49 141.85 77.34 140.65 94.21C140.49 96.45 140.22 99.86 140.06 101.79C139.75 105.5 139.78 106.05 140.34 106.35C140.76 106.58 141.36 106.42 149 104.09C168.76 98.05 194.61 90.98 196.93 90.98C197.83 90.98 198.09 91.24 198.88 92.98C199.7 94.78 199.71 95.65 198.9 96.66C198.3 97.4 198.26 97.55 198.09 99.67C196.2 123.28 187.59 141.43 170.68 157.43C166.63 161.26 154.72 171.79 147.67 177.75C144.22 180.68 144.24 180.67 138.95 180.85C132.39 181.06 19.99 181.22 19.06 181.01ZM101.59 136.19C108.77 134.39 111.11 133.72 112.35 133.1C114.54 132 117.14 128.78 117.45 126.78C117.68 125.32 118.71 114.56 119.46 105.7C119.88 100.79 120.41 94.89 120.63 92.59C121.11 87.6 121.04 85.39 120.32 82.89C118.96 78.2 115.49 74.55 110.78 72.87C109.19 72.3 108.99 72.27 106.27 72.28C103.55 72.28 103.33 72.31 101.61 72.9C97.47 74.33 94.52 76.94 92.67 80.82C91.13 84.02 91.03 85.14 91.44 94.59C91.61 98.61 92.09 109.91 92.5 119.71C92.91 129.5 93.29 137.6 93.35 137.7C93.6 138.1 94.99 137.84 101.59 136.19ZM181.69 118.35C182.72 117.6 183.18 117.06 183.73 115.95C185.69 112.04 184.23 106.74 181.2 106.74C178.45 106.74 176.1 110.88 176.64 114.76C177.13 118.18 179.56 119.92 181.69 118.35ZM90.06 36.49C91.22 35.2 91.16 33.39 89.94 32.16C87.9 30.12 85.04 33.07 86.36 35.84C87.06 37.33 89.01 37.67 90.06 36.49Z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="w-light">Filament</span><span class="w-bold">Tracker</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span data-i18n="nav.dashboard">Panel</span>
+      </button>
+      <button class="nav-item" data-view="inventory">
+        <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18M8 7V4h8v3"/></svg>
+        <span data-i18n="nav.inventory">Inventario</span>
+        <em class="nav-badge" id="navLow" hidden>0</em>
+      </button>
+      <button class="nav-item" data-view="history">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+        <span data-i18n="nav.history">Historial</span>
+      </button>
+      <button class="nav-item" data-view="stats">
+        <svg viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span data-i18n="nav.stats">Estadísticas</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/></svg>
+        <span data-i18n="nav.settings">Ajustes</span>
+      </button>
+    </nav>
+
+    <button class="btn primary block sidebar-cta" id="ctaNewPrint">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg>
+      <span data-i18n="nav.newPrint">Nueva impresión</span>
+    </button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="viewTitle">Panel</h1>
+        <p class="sub" id="viewSub"></p>
+      </div>
+      <div class="topbar-actions" id="topActions"></div>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ PANEL ============ -->
+      <section class="view" id="view-dashboard">
+        <div class="kpis" id="kpis"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2 data-i18n="dash.alerts">Avisos</h2>
+              <span class="chip" id="alertCount">0</span>
+            </div>
+            <div id="alerts" class="alerts"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2 data-i18n="dash.monthly">Consumo por mes</h2>
+            </div>
+            <div id="miniMonths"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2 data-i18n="dash.recent">Últimas impresiones</h2>
+            <button class="btn ghost sm" data-goto="history" data-i18n="dash.seeAll">Ver todo</button>
+          </div>
+          <div id="recentPrints"></div>
+        </div>
+      </section>
+
+      <!-- ============ INVENTARIO ============ -->
+      <section class="view" id="view-inventory" hidden>
+        <div class="toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" id="invSearch" data-i18n-ph="inv.search">
+          </div>
+          <select id="invMaterial" class="select">
+            <option value="" data-i18n="inv.allMaterials">Todos los materiales</option>
+          </select>
+          <select id="invSort" class="select">
+            <option value="name" data-i18n="inv.sort.name">Ordenar: nombre</option>
+            <option value="pct" data-i18n="inv.sort.pct">Ordenar: menos restante</option>
+            <option value="remaining" data-i18n="inv.sort.remaining">Ordenar: gramos restantes</option>
+            <option value="used" data-i18n="inv.sort.used">Ordenar: más usado</option>
+            <option value="stock" data-i18n="inv.sort.stock">Ordenar: más repuestos</option>
+          </select>
+          <label class="toggle"><input type="checkbox" id="invLowOnly"><span data-i18n="inv.lowOnly">Solo bajos</span></label>
+          <label class="toggle"><input type="checkbox" id="invStockOnly"><span data-i18n="inv.stockOnly">Con repuesto</span></label>
+          <label class="toggle"><input type="checkbox" id="invArchived"><span data-i18n="inv.archived">Ver archivados</span></label>
+        </div>
+        <div class="cards" id="filamentCards"></div>
+      </section>
+
+      <!-- ============ HISTORIAL ============ -->
+      <section class="view" id="view-history" hidden>
+        <div class="toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="text" id="hisSearch" data-i18n-ph="his.search">
+          </div>
+          <select id="hisFilament" class="select">
+            <option value="" data-i18n="his.allFilaments">Todos los filamentos</option>
+          </select>
+          <input type="date" id="hisFrom" class="select" data-i18n-title="his.from">
+          <input type="date" id="hisTo" class="select" data-i18n-title="his.to">
+          <label class="toggle"><input type="checkbox" id="hisFailed"><span data-i18n="his.failedOnly">Solo fallidas</span></label>
+          <button class="btn ghost sm" id="hisClear" data-i18n="his.clear">Limpiar</button>
+        </div>
+        <div class="card no-pad">
+          <table class="table" id="historyTable">
+            <thead>
+              <tr><th style="width:110px" data-i18n="his.date">Fecha</th>
+                  <th data-i18n="his.project">Proyecto</th>
+                  <th data-i18n="his.filaments">Filamentos</th>
+                  <th style="width:100px" class="right" data-i18n="his.total">Total</th>
+                  <th style="width:112px"></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="historyEmpty" class="empty" hidden></div>
+        </div>
+      </section>
+
+      <!-- ============ ESTADÍSTICAS ============ -->
+      <section class="view" id="view-stats" hidden>
+        <div class="kpis" id="statKpis"></div>
+        <div class="card">
+          <div class="card-head"><h2 data-i18n="stats.months">Gramos por mes</h2></div>
+          <div id="chartMonths"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h2 data-i18n="stats.topFilaments">Filamentos más usados</h2></div>
+            <div id="chartFilaments"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2 data-i18n="stats.byMaterial">Por material</h2></div>
+            <div id="chartMaterials"></div>
+            <div class="card-head" style="margin-top:22px">
+              <h2 data-i18n="stats.topProjects">Proyectos que más consumen</h2></div>
+            <div id="chartProjects"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ AJUSTES ============ -->
+      <section class="view" id="view-settings" hidden>
+        <div class="card">
+          <div class="card-head"><h2 data-i18n="set.prefs">Preferencias</h2></div>
+          <div class="form-grid">
+            <label class="field">
+              <span data-i18n="set.lang">Idioma</span>
+              <select id="setLang" class="select"></select>
+              <small data-i18n="set.langHelp"></small>
+            </label>
+            <label class="field">
+              <span data-i18n="set.low">Aviso de rollo bajo (%)</span>
+              <input type="number" id="setLow" min="1" max="90" step="1">
+              <small data-i18n="set.lowHelp"></small>
+            </label>
+            <label class="field">
+              <span data-i18n="set.spool">Peso por defecto del rollo (g)</span>
+              <input type="number" id="setSpool" min="100" step="50">
+              <small data-i18n="set.spoolHelp"></small>
+            </label>
+          </div>
+          <div class="row-end"><button class="btn primary" id="saveSettings" data-i18n="set.save">Guardar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2 data-i18n="set.dry">Secado por material</h2>
+            <span class="chip" data-i18n="set.dryUnit">días</span>
+          </div>
+          <p class="muted dry-help" data-i18n="set.dryHelp"></p>
+          <h3 class="sub-head" data-i18n="set.dryInUse">Materiales que usas</h3>
+          <div class="form-grid" id="dryGridUsed"></div>
+          <details class="dry-more">
+            <summary data-i18n="set.dryOthers">Otros materiales conocidos</summary>
+            <div class="form-grid" id="dryGridOther"></div>
+          </details>
+          <div class="row-end"><button class="btn primary" id="saveDry" data-i18n="set.drySave">Guardar tiempos</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2 data-i18n="set.tare">Tara del carrete por marca</h2>
+            <span class="chip">g</span>
+          </div>
+          <p class="muted dry-help" data-i18n="set.tareHelp"></p>
+          <div class="form-grid" id="tareGrid"></div>
+          <div class="row-end"><button class="btn primary" id="saveTare" data-i18n="set.tareSave">Guardar</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2 data-i18n="set.data">Datos</h2></div>
+          <div class="settings-rows">
+            <div class="setting-row">
+              <div><b data-i18n="set.import">Importar desde Excel</b><small data-i18n="set.importDesc"></small></div>
+              <button class="btn" id="btnImport" data-i18n="set.importBtn">Elegir archivo…</button>
+            </div>
+            <div class="setting-row">
+              <div><b data-i18n="set.export">Exportar a Excel</b><small data-i18n="set.exportDesc"></small></div>
+              <button class="btn" id="btnExport" data-i18n="set.exportBtn">Exportar</button>
+            </div>
+            <div class="setting-row">
+              <div><b data-i18n="set.backups">Copias de seguridad</b><small id="backupDesc"></small></div>
+              <div class="row-btns">
+                <button class="btn" id="btnBackup" data-i18n="set.backupsBtn">Copiar ahora</button>
+                <button class="btn ghost" id="btnBackupsOpen" data-i18n="set.backupsOpen">Abrir carpeta</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><b data-i18n="set.db">Base de datos</b><small id="dbPath">—</small></div>
+              <button class="btn ghost" id="btnFolder" data-i18n="set.dbBtn">Abrir carpeta</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============ MODAL: impresión ============ -->
+<div class="overlay" id="printModal" hidden>
+  <div class="modal">
+    <header class="modal-head">
+      <h2 id="printModalTitle">Nueva impresión</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field">
+          <span data-i18n="print.date">Fecha</span>
+          <input type="date" id="pDate">
+        </label>
+        <label class="field">
+          <span data-i18n="print.project">Proyecto</span>
+          <input type="text" id="pProject" list="projectList" data-i18n-ph="print.projectPh" autocomplete="off">
+          <datalist id="projectList"></datalist>
+        </label>
+      </div>
+      <div class="field">
+        <span data-i18n="print.items">Filamentos usados</span>
+        <div id="pItems" class="items"></div>
+        <button class="btn ghost sm" id="pAddItem">
+          <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg>
+          <span data-i18n="print.addColor">Añadir color</span>
+        </button>
+      </div>
+      <label class="field">
+        <span><span data-i18n="print.url">Enlace al modelo</span> <i data-i18n="common.optional"></i></span>
+        <input type="text" id="pUrl" data-i18n-ph="print.urlPh" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="field">
+        <span><span data-i18n="print.notes">Notas</span> <i data-i18n="common.optional"></i></span>
+        <textarea id="pNotes" rows="2" data-i18n-ph="print.notesPh"></textarea>
+      </label>
+      <label class="toggle"><input type="checkbox" id="pFailed">
+        <span><span data-i18n="print.failed">Impresión fallida</span>
+          <i class="hint" data-i18n="print.failedHint"></i></span></label>
+      <div class="total-line"><span data-i18n="print.total">Total:</span> <b id="pTotal">0 g</b></div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancelar</button>
+      <button class="btn primary" id="pSave" data-i18n="btn.save">Guardar</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: resultado de la impresión ============ -->
+<div class="overlay" id="failModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 data-i18n="fail.title">Resultado de la impresión</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="info-box" id="failIntro"></div>
+      <label class="toggle"><input type="checkbox" id="failToggle">
+        <span data-i18n="fail.toggle">Marcar como fallida</span></label>
+      <div class="field">
+        <span data-i18n="fail.grams">Gramos realmente gastados</span>
+        <div id="failItems" class="items"></div>
+        <small data-i18n="fail.gramsHelp"></small>
+      </div>
+      <label class="field">
+        <span><span data-i18n="fail.reason">Qué pasó</span> <i data-i18n="common.optional"></i></span>
+        <textarea id="failNotes" rows="3" data-i18n-ph="fail.reasonPh"></textarea>
+      </label>
+      <p class="muted small-note" data-i18n="fail.note"></p>
+      <div class="total-line"><span data-i18n="print.total">Total:</span> <b id="failTotal">0 g</b></div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancelar</button>
+      <button class="btn primary" id="failSave" data-i18n="btn.save">Guardar</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: filamento ============ -->
+<div class="overlay" id="filModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="filModalTitle">Nuevo filamento</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field"><span data-i18n="fil.material">Material</span>
+          <input type="text" id="fMaterial" list="materialList" placeholder="PLA" autocomplete="off">
+          <datalist id="materialList"></datalist>
+        </label>
+        <label class="field"><span data-i18n="fil.color">Color</span>
+          <input type="text" id="fColor" placeholder="black matte"></label>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span data-i18n="fil.name">Nombre</span>
+          <input type="text" id="fName" data-i18n-ph="fil.namePh">
+        </label>
+        <label class="field"><span data-i18n="fil.hex">Color en pantalla</span>
+          <div class="color-row"><input type="color" id="fHex"><input type="text" id="fHexTxt" spellcheck="false"></div>
+        </label>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span data-i18n="fil.brand">Marca del rollo</span>
+          <select id="fBrand" class="brand-sel"></select>
+          <input type="text" id="fBrandOther" data-i18n-ph="brand.otherPh" autocomplete="off" hidden>
+        </label>
+        <label class="field"><span data-i18n="fil.spoolType">Tipo de bobina</span>
+          <select id="fType"></select>
+        </label>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span data-i18n="fil.stock">Rollos de repuesto</span>
+          <input type="number" id="fStock" min="0" step="1" value="0"></label>
+        <div></div>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span data-i18n="fil.weight">Peso del rollo actual (g)</span>
+          <input type="number" id="fWeight" min="1" step="10"></label>
+        <label class="field"><span data-i18n="fil.opened">Rollo abierto el</span>
+          <input type="date" id="fOpened"></label>
+      </div>
+      <label class="field"><span><span data-i18n="fil.notes">Notas</span> <i data-i18n="common.optional"></i></span>
+        <textarea id="fNotes" rows="2"></textarea></label>
+      <label class="toggle mt"><input type="checkbox" id="fArchived">
+        <span data-i18n="fil.archived">Archivado (ocultar del inventario)</span></label>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn danger ghost" id="fDelete" hidden data-i18n="fil.delete">Eliminar</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancelar</button>
+      <button class="btn primary" id="fSave" data-i18n="btn.save">Guardar</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: ficha del filamento ============ -->
+<div class="overlay" id="detailModal" hidden>
+  <div class="modal wide">
+    <header class="modal-head">
+      <h2 id="detailTitle">Filamento</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body" id="detailBody"></div>
+    <footer class="modal-foot">
+      <button class="btn ghost" id="detailEdit" data-i18n="detail.edit">Editar</button>
+      <span class="spacer"></span>
+      <button class="btn primary" data-close data-i18n="spares.done">Hecho</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: rollo ============ -->
+<div class="overlay" id="rollModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="rollModalTitle">Rollo</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body" id="rollBody"></div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancelar</button>
+      <button class="btn primary" id="rSave" data-i18n="btn.confirm">Confirmar</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: repuestos ============ -->
+<div class="overlay" id="sparesModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="sparesTitle">Repuestos</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="info-box" id="sparesInfo"></div>
+      <div id="sparesList" class="spares"></div>
+      <button class="btn ghost sm" id="sparesAdd">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg>
+        <span data-i18n="spares.add">Añadir repuesto</span>
+      </button>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn primary" data-close data-i18n="spares.done">Hecho</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: confirmar ============ -->
+<div class="overlay" id="confirmModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head"><h2 id="cTitle" data-i18n="confirm.title">¿Seguro?</h2><button class="icon-btn" data-close>&times;</button></header>
+    <div class="modal-body"><p id="cText" class="muted"></p></div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancelar</button>
+      <button class="btn danger" id="cOk" data-i18n="btn.delete">Eliminar</button>
+    </footer>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

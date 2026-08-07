@@ -1,0 +1,253 @@
+<div align="center">
+
+<img src="brand/benchy-navy-tile.png" width="96" alt="Filament Tracker">
+
+# Filament Tracker
+
+**Lleva el control de tu filamento de impresión 3D: cuánto queda en cada rollo, qué
+tienes de repuesto y a dónde ha ido cada gramo.**
+
+Una aplicación de escritorio pequeña para Windows. Sin cuenta, sin nube y sin
+telemetría — tus datos viven en un único archivo SQLite junto al ejecutable.
+
+[English](README.md) · [Descargar](#descargar) · [Manual](#manual)
+
+<img src="docs/dashboard.png" alt="Panel">
+
+</div>
+
+---
+
+## Por qué
+
+Casi todos acabamos con una hoja de cálculo: una fila por impresión, una fórmula por
+rollo y un pequeño vértigo cada vez que cambias de bobina. Esta app es esa hoja de
+cálculo, salvo que entiende lo que es un rollo — que tiene marca, que se acaba, que
+lo sustituyes por otro que puede ser de otro fabricante, y que el PETG hay que
+secarlo bastante más a menudo que el PLA.
+
+## Qué hace
+
+- **Nivel de cada rollo, al día.** Cada impresión que registras se descuenta del
+  rollo que está puesto. Al abrir uno nuevo el contador arranca de cero sin perder
+  el historial.
+- **Repuestos con identidad propia.** El stock no es un contador: cada repuesto
+  tiene su marca, su tipo de bobina y su peso, así que tu negro puede ser Bambu Lab
+  y sus dos repuestos eSUN.
+- **Pesar en vez de estimar.** Pones el rollo en la báscula, escribes lo que marca,
+  y la app resta el peso del carrete vacío según la marca y el tipo de bobina.
+- **Avisos de secado.** Intervalos por material, contados desde la apertura y
+  reiniciados cada vez que registras un secado.
+- **Impresiones fallidas.** Marcas una como fallida y corriges los gramos que
+  realmente gastó — el material que no llegó a salir vuelve al rollo.
+- **Estadísticas.** Gramos por mes, filamentos más usados, reparto por material,
+  proyectos que más consumen y material desperdiciado.
+- **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
+- **Seis idiomas.** Español, inglés, francés, alemán, portugués e italiano.
+
+## Descargar
+
+Coge `Filament Tracker.exe` de la
+[última versión](../../releases/latest). Es un único archivo: sin instalador y sin
+necesidad de Python. Solo Windows 10/11 (usa el runtime WebView2 que viene de serie
+en Windows 11).
+
+> Conserva la carpeta `data` que aparece junto al ejecutable: ahí está tu base de
+> datos. Si mueves la app a otro sitio, llévate esa carpeta con ella.
+
+### Ejecutar desde el código
+
+```bash
+git clone https://github.com/xserggio/FilamentTracker.git
+cd FilamentTracker
+py -m pip install -r requirements.txt
+py app.py
+```
+
+Necesita Python 3.10 o superior y las dos dependencias de `requirements.txt`
+(`pywebview` y `openpyxl`).
+
+---
+
+## Manual
+
+### El modelo en un párrafo
+
+Un **filamento** es un material y un color con los que imprimes — `PLA - black`. En
+cada momento tiene un **rollo** puesto, con su peso, su fecha de apertura, su marca
+y su tipo de bobina. Puede tener además **repuestos** esperando en un cajón, cada
+uno con su marca, tipo y peso. Una **impresión** guarda una fecha, un proyecto y
+cuántos gramos gastó de cada filamento.
+
+Los gramos que quedan en el rollo puesto son:
+
+```
+restante = peso del rollo − gramos impresos desde que se abrió + corrección manual
+```
+
+Las impresiones con fecha **anterior** a la apertura suman al total histórico del
+filamento pero no tocan el rollo actual. Eso es lo que te permite estrenar una
+bobina sin borrar el historial.
+
+### Inventario
+
+<img src="docs/inventory.png" alt="Inventario">
+
+Una tarjeta por filamento, con el nivel del rollo puesto y una barra que pasa a
+ámbar y luego a rojo según se vacía. Al pulsar el nombre se abre su **ficha**: todos
+los rollos que ha tenido, con su marca, cuánto se consumió de cada uno y cuántos
+días duró, más la lista de impresiones que lo usaron.
+
+El pie de la tarjeta tiene, en orden: los días que lleva abierto el rollo, el
+contador de repuestos (`−` / número / `+`), un botón de **báscula**, uno de **gota**
+y **Rollo nuevo**.
+
+| Botón | Qué hace |
+|---|---|
+| `−` / `+` | Quita o añade un repuesto. Los nuevos heredan la marca y el tipo del rollo puesto. |
+| el número | Abre la lista de repuestos: marca, tipo de bobina y peso, editables uno a uno. |
+| ⚖ | Corregir los gramos restantes pesando el rollo. |
+| 💧 | Registrar un secado. |
+| Rollo nuevo | Estrenar una bobina, opcionalmente gastando uno de los repuestos. |
+
+Arriba hay filtros: búsqueda por texto, material, orden, *solo bajos*, *con
+repuesto* y *ver archivados*.
+
+### Registrar una impresión
+
+`Nueva impresión` pide fecha, nombre del proyecto, una fila por color con sus
+gramos, un enlace opcional a la página del modelo y notas. No hay límite de cuatro
+colores.
+
+<img src="docs/history.png" alt="Historial">
+
+En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
+**`!`**, uno de editar y otro de eliminar.
+
+### Impresiones fallidas
+
+El botón **`!`** abre un diálogo corto que hace dos cosas: marca la impresión como
+fallida y te deja **corregir los gramos realmente gastados**. Una impresión que se
+cortó a la mitad no consumió lo previsto, así que pones lo que llegó a salir y eso
+sustituye a las cifras originales — el material que no se gastó vuelve al rollo y
+las estadísticas se recalculan. Un color a 0 g se elimina de la impresión.
+
+Las fallidas siguen descontando material, porque se extruyó igual. Simplemente
+quedan marcadas, se pueden filtrar con *solo fallidas* y alimentan el dato de
+**material desperdiciado** en Estadísticas.
+
+### Secado
+
+Cada rollo guarda la fecha de su último secado. El contador arranca en la apertura
+(una bobina recién abierta viene seca) y se reinicia cada vez que registras uno.
+
+En la tarjeta aparece una gota: azul con los días transcurridos cuando va bien,
+ámbar con *secar* al pasarse del límite. También sale en los avisos del Panel.
+
+Los límites dependen del plástico y están en **Ajustes → Secado por material**. De
+partida: PLA y sus variantes 60 días, PLA-CF/ABS/ASA 45, PETG 30, TPU y PC 14,
+PA/Nylon/PVA 7. Lo que no esté en la lista usa 45.
+
+### Pesar un rollo
+
+En el diálogo de la ⚖ escribes lo que marca la báscula con el rollo entero y la
+**tara del carrete**; los gramos restantes salen solos.
+
+Esa tara viene precargada según la **marca** y el **tipo de bobina** del rollo —
+ambos son desplegables, y al cambiar cualquiera de los dos el número se actualiza.
+Los valores de partida salen de [SpoolmanDB](https://github.com/Donkie/SpoolmanDB),
+contrastados con [The Empty Spool](https://theemptyspool.cc/) y el foro de Bambu Lab:
+
+| Marca | Plástico | Cartón |
+|---|---|---|
+| Bambu Lab | 250 g | 196 g |
+| eSUN | 240 g | 170 g |
+| Prusament | 193 g | — |
+| Eryone | 187 g | — |
+| Geeetech | 180 g | — |
+| Overture | — | 155 g |
+| Elegoo | 154 g | 154 g |
+| Polymaker | — | 140 g |
+| Sunlu | 130 g | — |
+| Creality | 225 g | 120 g |
+| Anycubic | 127 g | 125 g |
+| Hatchbox | 251 g | — |
+| JAYO | — | 120 g |
+| Marca desconocida | 220 g | 160 g |
+
+**Tómalos como punto de partida.** La dispersión es grande incluso dentro de una
+misma marca —Bambu va de 196 a 253 g y eSUN de 161 a 253— porque cambian el molde
+entre versiones. Por eso, en cuanto corriges la tara pesando un carrete tuyo, la app
+guarda **tu** número para esa combinación de marca y tipo y lo usa a partir de
+entonces. También se editan a mano en **Ajustes → Tara del carrete por marca**.
+
+### Estadísticas
+
+<img src="docs/stats.png" alt="Estadísticas">
+
+Gramos por mes, filamentos más usados, reparto por material, proyectos que más
+consumen y material desperdiciado. Los KPIs del Panel y de aquí son clicables y te
+llevan a la vista correspondiente con los filtros ya puestos.
+
+### Importar desde Excel
+
+**Ajustes → Importar desde Excel** lee una hoja exportada de Google Sheets con las
+pestañas `Inventario`, `Historial de Impresiones` y `Respuestas de formulario 2`
+(la forma que genera un formulario de Google). Las filas que comparten fecha y
+proyecto se agrupan en una sola impresión multicolor. Volver a importar el mismo
+archivo no duplica nada.
+
+Si tu hoja tiene otra forma, `importer.py` son unas 150 líneas legibles.
+
+### Copias de seguridad
+
+Cada vez que arranca la app guarda una copia de la base de datos en `data/backups/`,
+una por día, conservando las 10 últimas. Usa la API de backup de SQLite en vez de
+copiar el archivo, así que la copia es consistente aunque haya una escritura a
+medias. **Ajustes → Datos** enseña cuántas hay, permite forzar una y abrir la
+carpeta.
+
+### Tus datos
+
+Todo vive en `data/filaments.db`, un archivo SQLite normal. No se envía nada a
+ninguna parte. Para hacer copia, copia ese archivo. Para curiosear dentro, cualquier
+visor de SQLite vale.
+
+---
+
+## Compilar el ejecutable
+
+```bash
+py -m pip install pyinstaller
+powershell -ExecutionPolicy Bypass -File build.ps1
+```
+
+Deja `dist/Filament Tracker.exe` con el icono de `brand/`.
+
+`core.py` separa a propósito los recursos de solo lectura (`web/`, que PyInstaller
+extrae a una carpeta temporal) de los datos que hay que conservar (la base de datos,
+siempre junto al ejecutable). Sin esa distinción la base de datos acabaría en el
+directorio temporal y desaparecería al cerrar.
+
+## Estructura
+
+```
+app.py         ventana pywebview y puente con la interfaz
+core.py        esquema SQLite, rutas, cálculo de restantes y estadísticas
+importer.py    lectura del Excel
+build.ps1      empaquetado con PyInstaller
+web/           index.html · style.css · app.js · i18n.js · icon.ico
+brand/         logo en navy, negro y blanco (svg, png, ico)
+tools/         generador de base de datos de ejemplo y script de capturas
+data/          tu base de datos (no está en el repo)
+```
+
+## Créditos
+
+Los pesos de carretes vacíos vienen de [SpoolmanDB](https://github.com/Donkie/SpoolmanDB)
+y [The Empty Spool](https://theemptyspool.cc/), ambos mantenidos por la comunidad.
+Construido sobre [pywebview](https://pywebview.flowrl.com/).
+
+## Licencia
+
+[MIT](LICENSE).

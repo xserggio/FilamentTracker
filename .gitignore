@@ -1,0 +1,32 @@
+# --- datos del usuario: nunca se publican ---
+data/
+*.db
+*.db-journal
+*.db-wal
+
+# --- empaquetado ---
+dist/
+build/
+*.spec
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# --- sistema y editores ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- temporales de la app ---
+web/_mock.json
+web/_app.js.bak
+_shot.ps1
+err.log
+out.log
