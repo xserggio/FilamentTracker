@@ -40,6 +40,9 @@ secarlo bastante más a menudo que el PLA.
   reiniciados cada vez que registras un secado.
 - **Impresiones fallidas.** Marcas una como fallida y corriges los gramos que
   realmente gastó — el material que no llegó a salir vuelve al rollo.
+- **Lee lo que lamina Bambu Studio.** Laminas una placa y un aviso te ofrece
+  apuntar la impresión con los gramos ya puestos y un rollo propuesto por cada
+  color. Tú confirmas; él lo recuerda.
 - **Estadísticas.** Gramos por mes, filamentos más usados, reparto por material,
   proyectos que más consumen y material desperdiciado.
 - **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
@@ -139,6 +142,40 @@ colores.
 
 En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
 **`!`**, uno de editar y otro de eliminar.
+
+### Después de laminar en Bambu Studio
+
+Al laminar, Bambu Studio escribe la placa en una carpeta suya, y ahí están los
+gramos de cada filamento que va a gastar. Filament Tracker lee esa carpeta y te
+ofrece la impresión en vez de hacerte teclearla:
+
+> **Recién laminado** · chimenea escalada D2.2 — 7,5 g · PLA
+> *Ahora no* · **Apuntar impresión**
+
+**Apuntar impresión** abre el formulario de siempre con el nombre del proyecto,
+los gramos y un rollo ya elegido por cada color. No se registra nada hasta que
+das a Guardar, y antes puedes cambiar lo que quieras.
+
+**El color del laminado no es el rollo que tienes puesto.** Casi siempre eliges un
+perfil porque es el único que existe — no hay Matte en Generic, así que
+seleccionas el de Bambu Lab tengas el rollo que tengas — o cambias el color desde
+la pantalla de la impresora y el laminador no se entera. Por eso la propuesta va
+primero por material y línea de producto (un perfil *Matte* busca un rollo mate),
+y el color solo desempata. La fila de la que no está seguro sale en ámbar con
+*Comprueba el rollo*.
+
+**Aprende.** El rollo que confirmas queda apuntado contra esa combinación exacta
+de material + perfil + color, así que la próxima vez que se lamine lo mismo ya no
+hay nada que adivinar. En Ajustes › Bambu Studio está todo lo aprendido, y lo que
+esté mal se olvida de un clic.
+
+El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* lo esconde y vuelve
+a la siguiente; la **×** descarta ese laminado para siempre. Un laminado que no
+llegaste a imprimir simplemente no se confirma nunca.
+
+Esto lee la carpeta temporal del propio Bambu Studio, que no es una interfaz
+documentada. Si una versión futura la cambia de sitio, el aviso deja de aparecer y
+ya está — no afecta a nada más.
 
 ### Impresiones fallidas
 
@@ -265,6 +302,7 @@ directorio temporal y desaparecería al cerrar.
 app.py         ventana pywebview y puente con la interfaz
 core.py        esquema SQLite, rutas, cálculo de restantes y estadísticas
 importer.py    lectura del Excel
+slicer.py      lee las placas que ha laminado Bambu Studio
 build.ps1      empaquetado con PyInstaller
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo en navy, negro y blanco (svg, png, ico)

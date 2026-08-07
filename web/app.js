@@ -9,6 +9,7 @@ const S = {
   his: { search: '', filament: '', from: '', to: '', failedOnly: false },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null,
+  slice: null, sliceTimer: null,
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -818,6 +819,8 @@ function renderSettings() {
     return `<option value="${c}"${c === cur ? ' selected' : ''}>${esc(label)}</option>`;
   }).join('');
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
+  $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
+  renderLearned();
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
   $('#dbPath').textContent = S.dbPath || '—';
@@ -856,6 +859,44 @@ function renderSettings() {
     n: S.backups.count || 0, d: S.backups.last || '—' });
 }
 
+/* ---------- what Bambu Studio just sliced ----------
+   Slicing is the moment the grams are known, so that is when the print is
+   offered. Nothing is ever recorded from here: the card opens the normal form
+   filled in, and the user confirms or corrects it. */
+
+async function checkSlices() {
+  if (S.settings.slicer_watch === '0') return;
+  const list = await call('slices', { limit: 1 });
+  if (failed(list) || !list || !list.length) return;
+  // a card already on screen for the same slice must not restart its animation
+  if (S.slice && S.slice.path === list[0].path) return;
+  S.slice = list[0];
+  showSliceCard(S.slice);
+}
+
+function showSliceCard(sl) {
+  const when = new Date(sl.sliced_at);
+  const mins = Math.max(0, Math.round((Date.now() - when.getTime()) / 60000));
+  $('#sliceWhen').textContent = mins < 1 ? t('slice.justNow')
+    : mins < 60 ? t('slice.minsAgo', { n: mins })
+      : when.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
+  $('#sliceProject').textContent = sl.project || t('slice.untitled');
+  $('#sliceChips').innerHTML = sl.items.map((i) => `
+    <span class="slice-chip">
+      <span class="dot" style="background:${esc(i.hex || '#888')}"></span>
+      ${g(i.grams)} g · ${esc(i.material || '?')}
+    </span>`).join('');
+  show('#sliceCard');
+}
+
+/* "Not now" hides the card but leaves the slice pending, so it comes back next
+   launch. The × says it is dealt with and moves the watermark past it. */
+function hideSliceCard(forget) {
+  hide('#sliceCard');
+  if (forget && S.slice) call('dismiss_slice', { path: S.slice.path });
+  S.slice = null;
+}
+
 /* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
@@ -872,24 +913,57 @@ function openPrint(p) {
   setTimeout(() => $('#pProject').focus(), 60);
 }
 
-function addItemRow(fid = '', grams = '') {
+/* The form as the slicer would fill it in: one row per filament, each with the
+   spool the app believes it was and the option list behind it. */
+function openPrintFromSlice(sl) {
+  openPrint(null);
+  $('#printModalTitle').textContent = t('print.fromSlice');
+  $('#pProject').value = sl.project || '';
+  $('#pItems').innerHTML = '';
+  sl.items.forEach((i) => addItemRow(i.pick || '', i.grams, i));
+  printTotal();
+  hide('#sliceCard');
+  setTimeout(() => {
+    const unsure = $('#pItems .item-row.guess select');
+    (unsure || $('#pProject')).focus();
+  }, 60);
+}
+
+function addItemRow(fid = '', grams = '', slice = null) {
   const opts = S.filaments.filter((f) => !f.archived || f.id == fid)
     .map((f) => `<option value="${f.id}" ${f.id == fid ? 'selected' : ''}>${esc(f.name)} — ${g(f.remaining)} g</option>`)
     .join('');
   const row = document.createElement('div');
   row.className = 'item-row';
+  // a suggestion the app is not sure about is marked as such rather than
+  // dressed up as a decision
+  if (slice && !slice.confident) row.classList.add('guess');
+  if (slice) row.dataset.sig = slice.signature || '';
   row.innerHTML = `
     <select>${fid ? '' : `<option value="">${esc(t('print.pickFilament'))}</option>`}${opts}</select>
     <input type="number" step="0.01" min="0" placeholder="${esc(t('print.grams'))}" value="${grams === '' ? '' : grams}">
-    <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>`;
+    <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>
+    ${slice ? `<small class="item-note">${sliceNote(slice)}</small>` : ''}`;
   row.querySelector('button').onclick = () => {
     row.remove();
     if (!$('#pItems').children.length) addItemRow();
     printTotal();
   };
   row.querySelector('input').oninput = printTotal;
+  // changing the spool by hand is the correction the app learns from
+  if (slice) row.querySelector('select').onchange = () => row.classList.remove('guess');
   $('#pItems').appendChild(row);
   printTotal();
+}
+
+/* Says where the suggestion came from, so an odd one is easy to spot. */
+function sliceNote(i) {
+  // the profile already names the material ("Bambu PLA Matte"), so saying both
+  // would just read as "PLA · Generic PLA"
+  const what = (i.profile ? i.profile.replace(/\s*@.*$/, '') : '') || i.material || '?';
+  return i.confident
+    ? t('slice.sure', { what: esc(what) })
+    : `<b>${esc(t('slice.check'))}</b> ${t('slice.unsure', { what: esc(what) })}`;
 }
 
 function printTotal() {
@@ -913,6 +987,15 @@ async function savePrint() {
     notes: $('#pNotes').value.trim(), failed: $('#pFailed').checked ? 1 : 0, items,
   });
   if (failed(res)) return;
+
+  // The confirmations just given are what make the next identical slice a
+  // certainty instead of a guess.
+  const matches = $$('#pItems .item-row')
+    .filter((r) => r.dataset.sig && r.querySelector('select').value)
+    .map((r) => ({ signature: r.dataset.sig, filament_id: r.querySelector('select').value }));
+  if (matches.length) await call('remember_matches', { matches });
+  if (S.slice) { call('dismiss_slice', { path: S.slice.path }); S.slice = null; }
+
   hide('#printModal');
   await reload();
   toast(S.editingPrint ? t('toast.printUpdated') : t('toast.printSaved'));
@@ -1124,6 +1207,31 @@ async function saveRoll() {
   await reload();
 }
 
+/* Every confirmation given on a slice, so a wrong one can be undone. */
+async function renderLearned() {
+  const list = await call('learned_matches');
+  const box = $('#learnedList');
+  if (failed(list) || !list || !list.length) {
+    box.innerHTML = `<p class="muted">${esc(t('set.learnedEmpty'))}</p>`;
+    return;
+  }
+  box.innerHTML = list.map((m) => `
+    <div class="learned-row">
+      <span class="dot" style="background:${esc(m.hex || '#888')}"></span>
+      <b>${esc(m.name)}</b>
+      <span class="learned-sig">${esc(m.signature)}</span>
+      <button class="icon-btn" data-forget="${esc(m.signature)}"
+              title="${esc(t('set.forget'))}">${svg('close')}</button>
+    </div>`).join('');
+  $$('[data-forget]', box).forEach((b) => {
+    b.onclick = async () => {
+      await call('forget_match', b.dataset.forget);
+      renderLearned();
+      toast(t('toast.forgot'));
+    };
+  });
+}
+
 /* ---------- confirmation and modals ---------- */
 function confirmDialog(title, text, fn) {
   $('#cTitle').textContent = title;
@@ -1139,6 +1247,10 @@ function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
   $('#ctaNewPrint').onclick = () => openPrint(null);
+
+  $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);
+  $('#sliceLater').onclick = () => hideSliceCard(false);
+  $('#sliceDismiss').onclick = () => hideSliceCard(true);
 
   $('#invSearch').oninput = (e) => { S.inv.search = e.target.value; renderInventory(); };
   $('#invMaterial').onchange = (e) => { S.inv.material = e.target.value; renderInventory(); };
@@ -1219,6 +1331,7 @@ function wire() {
       lang: $('#setLang').value,
       temp_unit: $('#setTempUnit').value,
       currency: $('#setCurrency').value,
+      slicer_watch: $('#setSlicerWatch').checked ? '1' : '0',
       low_threshold_pct: Number($('#setLow').value) || 15,
       default_spool_g: Number($('#setSpool').value) || 1000,
     });
@@ -1299,6 +1412,12 @@ async function boot() {
     setView('inventory');
     toast(t('toast.firstRun'), 'info');
   }
+
+  // Slicing usually happens with this window in the background, so the check
+  // runs on a timer as well as whenever the window is looked at again.
+  checkSlices();
+  S.sliceTimer = setInterval(checkSlices, 45000);
+  window.addEventListener('focus', checkSlices);
 }
 
 if (window.pywebview && window.pywebview.api) boot();

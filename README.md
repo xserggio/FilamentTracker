@@ -40,6 +40,9 @@ needs drying more often than PLA.
   every time you log a drying.
 - **Failed prints.** Flag a print as failed and correct the grams it actually used —
   the material that never came out goes back on the roll.
+- **Reads what Bambu Studio sliced.** Slice a plate and a card offers to log
+  the print with the grams already filled in and a spool suggested per colour.
+  You confirm; it remembers.
 - **Statistics.** Grams per month, most used filaments, split by material, hungriest
   projects and wasted material.
 - **Excel import.** Bring across an existing spreadsheet in one go.
@@ -137,6 +140,40 @@ optional link to the model page, and notes. There is no four-colour limit.
 
 In the history, each row has a link button (if you saved a URL), a **`!`** button,
 an edit button and a delete button.
+
+### After slicing in Bambu Studio
+
+When you slice, Bambu Studio writes the plate into a folder of its own, and in
+there are the grams of every filament it is about to use. Filament Tracker reads
+that folder and offers the print instead of making you type it:
+
+> **Just sliced** · chimenea escalada D2.2 — 7.5 g · PLA
+> *Not now* · **Log this print**
+
+**Log this print** opens the normal form with the project name, the grams and a
+spool already picked per colour. Nothing is recorded until you press Save, and
+you can change anything first.
+
+**The colour in a sliced file is not the spool you loaded.** Most of the time you
+pick a profile because it is the only one that exists — there is no Matte under
+Generic, so you select Bambu Lab's whatever spool is on the printer — or you
+change the colour on the printer's screen and the slicer never hears about it.
+So the suggestion goes on the material and the product line first (a *Matte*
+profile looks for a matte spool), and only uses the colour to break a tie. A row
+it is not sure about is highlighted in amber with *Check the spool*.
+
+**It learns.** The spool you confirm is remembered against that exact
+material + profile + colour, so the next time the same thing is sliced there is
+nothing to guess. Settings › Bambu Studio lists everything it has learned, and
+anything wrong can be forgotten with one click.
+
+The card can be switched off in Settings › Bambu Studio. *Not now* hides it and
+brings it back next time; the **×** dismisses that slice for good. A slice you
+never printed is simply never confirmed.
+
+This reads Bambu Studio's own temporary folder, which is not a documented
+interface. If a future version moves it, the card just stops appearing — nothing
+else changes.
 
 ### Failed prints
 
@@ -261,6 +298,7 @@ folder and vanish on exit.
 app.py         pywebview window and the bridge to the interface
 core.py        SQLite schema, paths, remaining-grams maths and statistics
 importer.py    Excel reader
+slicer.py      reads the plates Bambu Studio has sliced
 build.ps1      PyInstaller packaging
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo in navy, black and white (svg, png, ico)

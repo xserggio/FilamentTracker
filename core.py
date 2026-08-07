@@ -93,6 +93,18 @@ CREATE TABLE IF NOT EXISTS settings (
     key           TEXT PRIMARY KEY,
     value         TEXT NOT NULL
 );
+
+-- What the slicer wrote -> which spool it actually was. The colour in a sliced
+-- file is whatever was picked on screen or inherited from the AMS slot, so it
+-- rarely matches the real spool. Rather than guess forever, every confirmation
+-- is remembered here and the next identical slice needs no guessing.
+CREATE TABLE IF NOT EXISTS slicer_map (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    signature     TEXT NOT NULL UNIQUE,
+    filament_id   INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
+    hits          INTEGER NOT NULL DEFAULT 1,
+    last_used     TEXT NOT NULL DEFAULT ''
+);
 """
 
 DEFAULT_SETTINGS = {
@@ -101,6 +113,8 @@ DEFAULT_SETTINGS = {
     "warn_no_stock": "1",          # warn when a roll runs low with no spare
     "lang": "",                    # interface language ("" = detect from the OS)
     "currency": "EUR",             # what prices are entered in; never converted
+    "slicer_watch": "1",           # offer a print when Bambu Studio slices one
+    "slicer_seen": "0",            # newest slice already offered (epoch seconds)
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
@@ -863,6 +877,38 @@ class Store:
              "grams": round(float(r["grams"]), 2)}
             for r in rows
         ]
+
+    # ---------- what the slicer said -> which spool it was ----------
+
+    def remember_match(self, signature: str, fid: int):
+        """Learn a confirmation so the same slice never has to be guessed twice."""
+        sig = (signature or "").strip()
+        if not sig:
+            return
+        self.db.execute(
+            "INSERT INTO slicer_map(signature, filament_id, hits, last_used) "
+            "VALUES(?,?,1,?) ON CONFLICT(signature) DO UPDATE SET "
+            "filament_id=excluded.filament_id, hits=hits+1, last_used=excluded.last_used",
+            (sig, int(fid), today()),
+        )
+        self.db.commit()
+
+    def recall_match(self, signature: str):
+        r = self.db.execute(
+            "SELECT filament_id FROM slicer_map WHERE signature=?",
+            ((signature or "").strip(),)
+        ).fetchone()
+        return r["filament_id"] if r else None
+
+    def forget_match(self, signature: str):
+        self.db.execute("DELETE FROM slicer_map WHERE signature=?", (signature,))
+        self.db.commit()
+
+    def learned_matches(self) -> list:
+        return [dict(r) for r in self.db.execute(
+            "SELECT m.signature, m.hits, m.last_used, f.id, f.name, f.hex "
+            "FROM slicer_map m JOIN filaments f ON f.id = m.filament_id "
+            "ORDER BY m.hits DESC, m.last_used DESC")]
 
     # ---------- backups ----------
 
