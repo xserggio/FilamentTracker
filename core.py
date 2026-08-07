@@ -115,6 +115,7 @@ DEFAULT_SETTINGS = {
     "currency": "EUR",             # what prices are entered in; never converted
     "slicer_watch": "1",           # offer a print when Bambu Studio slices one
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)
+    "slicer_dir": "",              # folder to watch ("" = find it)
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.

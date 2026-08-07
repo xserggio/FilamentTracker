@@ -820,6 +820,8 @@ function renderSettings() {
   }).join('');
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
+  $('#setSlicerDir').value = S.settings.slicer_dir || '';
+  renderSlicerFolder();
   renderLearned();
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
@@ -1207,6 +1209,33 @@ async function saveRoll() {
   await reload();
 }
 
+/* The folder is found on its own, but the guess can be wrong -- a portable
+   install, a redirected TEMP -- and there was no way to see which one it landed
+   on, let alone correct it. This shows the path in use and what is in it. */
+async function renderSlicerFolder() {
+  const st = await call('slicer_folder');
+  const el = $('#slicerDirState');
+  if (failed(st) || !st) { el.textContent = ''; return; }
+  // the field stays empty while the folder is the one found automatically, so
+  // "find it for me" is the visible default rather than a path frozen in place
+  $('#setSlicerDir').placeholder = st.path;
+  el.classList.toggle('bad', !st.exists || !st.plates);
+  el.textContent = !st.exists ? t('set.folderMissing')
+    : !st.plates ? t('set.folderEmpty')
+      : t('set.folderOk', { n: st.plates });
+}
+
+async function saveSlicerDir(dir) {
+  const r = await call('save_settings', { slicer_dir: dir });
+  if (failed(r)) return;
+  S.settings.slicer_dir = dir;
+  $('#setSlicerDir').value = dir;
+  await renderSlicerFolder();
+  S.slice = null;            // the next check looks in the new folder
+  checkSlices();
+  toast(t('toast.folderSaved'));
+}
+
 /* Every confirmation given on a slice, so a wrong one can be undone. */
 async function renderLearned() {
   const list = await call('learned_matches');
@@ -1247,6 +1276,14 @@ function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
   $('#ctaNewPrint').onclick = () => openPrint(null);
+
+  $('#btnPickSlicerDir').onclick = async () => {
+    const dir = await call('pick_slicer_folder');
+    if (failed(dir) || !dir) return;
+    saveSlicerDir(dir);
+  };
+  $('#btnResetSlicerDir').onclick = () => saveSlicerDir('');
+  $('#setSlicerDir').onchange = (e) => saveSlicerDir(e.target.value.trim());
 
   $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);
   $('#sliceLater').onclick = () => hideSliceCard(false);
