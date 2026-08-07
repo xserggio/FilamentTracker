@@ -182,12 +182,13 @@ Al laminar, Bambu Studio escribe la placa en una carpeta suya, y ahí están los
 gramos de cada filamento que va a gastar. Filament Tracker lee esa carpeta y te
 ofrece la impresión en vez de hacerte teclearla:
 
-> **Recién laminado** · chimenea escalada D2.2 — 7,5 g · PLA
-> *Ahora no* · **Apuntar impresión**
+<img src="docs/slice.png" alt="El aviso que ofrece la impresión recién laminada">
 
 **Apuntar impresión** abre el formulario de siempre con el nombre del proyecto,
 los gramos y un rollo ya elegido por cada color. No se registra nada hasta que
 das a Guardar, y antes puedes cambiar lo que quieras.
+
+<img src="docs/sliceform.png" alt="El formulario relleno a partir del laminado">
 
 **El color del laminado no es el rollo que tienes puesto.** Casi siempre eliges un
 perfil porque es el único que existe — no hay Matte en Generic, así que
@@ -369,7 +370,7 @@ slicer.py      lee las placas que ha laminado Bambu Studio
 build.ps1      empaquetado con PyInstaller
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo en navy, negro y blanco (svg, png, ico)
-tools/         generador del catálogo, base de datos de ejemplo y capturas
+tools/         generador del catálogo, datos y laminado de ejemplo, capturas
 data/          tu base de datos (no está en el repo)
 ```
 
