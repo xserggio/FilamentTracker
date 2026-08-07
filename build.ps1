@@ -9,6 +9,7 @@ py -m PyInstaller --noconfirm --clean --onefile --windowed `
     --name "Filament Tracker" `
     --icon "brand\icon-navy-tile.ico" `
     --add-data "web;web" `
+    --add-data "catalog.json;." `
     app.py
 
 # los restos de compilacion no hacen falta para distribuir
