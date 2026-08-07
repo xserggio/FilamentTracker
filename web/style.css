@@ -50,13 +50,16 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
 /* ============ layout ============ */
 .shell{display:flex;height:100vh}
 
+/* Five entries in a full-height column leave a lot of air below them, and at
+   13.5px they read as a footnote to the page rather than its navigation. Wider
+   and larger, they carry the space instead of floating in it. */
 .sidebar{
-  width:224px;flex:none;background:var(--bg-2);border-right:1px solid var(--line-soft);
-  display:flex;flex-direction:column;padding:18px 14px;gap:22px;
+  width:250px;flex:none;background:var(--bg-2);border-right:1px solid var(--line-soft);
+  display:flex;flex-direction:column;padding:20px 15px;gap:24px;
 }
 .brand{display:flex;align-items:center;gap:10px;padding:6px 4px 0}
 /* the Benchy stands alone, no container: the box follows its real aspect ratio */
-.brand-mark{width:45px;height:36.7px;flex:none;color:#fff}
+.brand-mark{width:49px;height:40px;flex:none;color:#fff}
 .brand-mark svg{stroke:none}
 
 /* One-line wordmark: the weight contrast does the job the second line in small
@@ -64,24 +67,24 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
    tracking than the text cut. */
 .brand-text{
   font-family:"Segoe UI Variable Display","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
-  font-size:16.5px;line-height:1;display:flex;align-items:baseline;gap:4.5px;
+  font-size:18px;line-height:1;display:flex;align-items:baseline;gap:5px;
   white-space:nowrap;color:#eceef5;
 }
 .brand-text .w-light{font-weight:290;letter-spacing:-.1px;color:#b9c0d4}
 .brand-text .w-bold{font-weight:680;letter-spacing:-.55px}
 
-.nav{display:flex;flex-direction:column;gap:3px;flex:1}
+.nav{display:flex;flex-direction:column;gap:5px;flex:1}
 .nav-item{
-  display:flex;align-items:center;gap:11px;width:100%;padding:9px 11px;border:0;border-radius:10px;
-  background:transparent;color:var(--muted);cursor:pointer;font-size:13.5px;font-weight:500;
+  display:flex;align-items:center;gap:13px;width:100%;padding:12px 13px;border:0;border-radius:11px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:14.5px;font-weight:500;
   text-align:left;transition:background .13s,color .13s;
 }
-.nav-item svg{width:17px;height:17px;flex:none;stroke-width:1.8}
+.nav-item svg{width:19px;height:19px;flex:none;stroke-width:1.75}
 .nav-item:hover{background:#1b2029;color:var(--text)}
 .nav-item.active{background:var(--accent-soft);color:#b9c1ff}
 .nav-badge{
-  margin-left:auto;font-style:normal;font-size:11px;font-weight:700;min-width:19px;text-align:center;
-  padding:1px 5px;border-radius:20px;background:var(--danger);color:#fff;
+  margin-left:auto;font-style:normal;font-size:11.5px;font-weight:700;min-width:21px;text-align:center;
+  padding:2px 6px;border-radius:20px;background:var(--danger);color:#fff;
 }
 .sidebar-cta{margin-top:auto}
 
