@@ -203,9 +203,14 @@ de material + perfil + color, así que la próxima vez que se lamine lo mismo ya
 hay nada que adivinar. En Ajustes › Bambu Studio está todo lo aprendido, y lo que
 esté mal se olvida de un clic.
 
-El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* lo esconde y vuelve
-a la siguiente; la **×** descarta ese laminado para siempre. Un laminado que no
-llegaste a imprimir simplemente no se confirma nunca.
+El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* aparta ese laminado
+durante la sesión y lo vuelve a ofrecer al siguiente arranque; la **×** lo descarta
+para siempre. Un laminado que no llegaste a imprimir simplemente no se confirma nunca.
+
+**Desde un laminado.** El aviso solo ofrece la placa más reciente, y una sola vez.
+En Historial, junto a *Nueva impresión*, **Desde un laminado** lista todo lo que
+sigue en la carpeta — así puedes apuntar uno que apartaste, o uno que laminaste con
+la app cerrada. Solo aparece si hay una carpeta con placas dentro.
 
 **La carpeta.** La encuentra sola, y en ese mismo panel se ve cuál está usando y
 cuántas placas laminadas hay dentro — así, si el aviso no aparece nunca, puedes
