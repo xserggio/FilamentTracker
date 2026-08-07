@@ -12,6 +12,7 @@ import webview
 from core import (APP_DIR, DB_PATH, DRY_DAYS, SPOOL_TYPES, Store,
                   clean_url, detect_lang, guess_hex)
 import catalog
+import slicer
 from importer import import_excel
 
 WEB_DIR = os.path.join(APP_DIR, "web")
@@ -244,6 +245,72 @@ class Api:
             return ok([{"id": r["filament"]["id"], "name": r["filament"]["name"],
                         "hex": r["filament"]["hex"], "delta": r["delta"],
                         "same_material": r["same_material"]} for r in res[:8]])
+        except Exception as e:
+            return err(e)
+
+    # ---------- what Bambu Studio just sliced ----------
+
+    def slices(self, data=None):
+        """Slices worth offering, each with a suggested spool per filament.
+
+        Anything already offered is filtered out by timestamp, so dismissing a
+        slice makes it stay dismissed and re-slicing the same plate offers it
+        again.
+        """
+        data = data or {}
+        try:
+            s = self._store
+            if s.get_settings().get("slicer_watch", "1") != "1":
+                return ok([])
+            try:
+                since = float(s.get_settings().get("slicer_seen") or 0)
+            except ValueError:
+                since = 0.0
+            if data.get("all"):
+                since = 0.0
+            fils = s.filaments()
+            out = []
+            for sl in slicer.latest_slices(limit=int(data.get("limit") or 3), since=since):
+                for item in sl["items"]:
+                    sig = slicer.signature(item)
+                    item["signature"] = sig
+                    item.update(slicer.candidates(item, fils, s.recall_match(sig)))
+                out.append(sl)
+            return ok(out)
+        except Exception as e:
+            traceback.print_exc()
+            return err(e)
+
+    def dismiss_slice(self, data):
+        """Remember how far we have looked, so this slice is not offered again."""
+        try:
+            path = data.get("path") or ""
+            stamp = os.path.getmtime(path) if path and os.path.exists(path) else 0
+            self._store.set_settings({"slicer_seen": str(stamp)})
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def remember_matches(self, data):
+        """Store the confirmations the user just gave on a slice."""
+        try:
+            for m in data.get("matches") or []:
+                if m.get("signature") and m.get("filament_id"):
+                    self._store.remember_match(m["signature"], int(m["filament_id"]))
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def forget_match(self, signature):
+        try:
+            self._store.forget_match(signature or "")
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def learned_matches(self):
+        try:
+            return ok(self._store.learned_matches())
         except Exception as e:
             return err(e)
 

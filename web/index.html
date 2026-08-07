@@ -229,6 +229,19 @@
           <div class="row-end"><button class="btn primary" id="saveTare" data-i18n="set.tareSave">Save</button></div>
         </div>
 
+        <div class="card" id="slicerCard">
+          <div class="card-head">
+            <h2 data-i18n="set.slicer">Bambu Studio</h2>
+          </div>
+          <p class="muted dry-help" data-i18n="set.slicerHelp"></p>
+          <label class="toggle"><input type="checkbox" id="setSlicerWatch">
+            <span><span data-i18n="set.slicerWatch">Offer a print after slicing</span>
+              <i class="hint" data-i18n="set.slicerWatchHint"></i></span></label>
+          <h3 class="sub-head" data-i18n="set.learned">Remembered spools</h3>
+          <p class="muted dry-help" data-i18n="set.learnedHelp"></p>
+          <div id="learnedList" class="learned"></div>
+        </div>
+
         <div class="card">
           <div class="card-head"><h2 data-i18n="set.data">Data</h2></div>
           <div class="settings-rows">
@@ -459,6 +472,29 @@
       <button class="btn ghost" data-close data-i18n="btn.cancel">Cancel</button>
       <button class="btn danger" id="cOk" data-i18n="btn.delete">Delete</button>
     </footer>
+  </div>
+</div>
+
+<!-- Offered when Bambu Studio has sliced something. Nothing is recorded from
+     here: it opens the print form filled in, and the user confirms. -->
+<div id="sliceCard" class="slice-card" hidden>
+  <button class="icon-btn slice-x" id="sliceDismiss" data-i18n-title="slice.dismiss">&times;</button>
+  <div class="slice-head">
+    <span class="slice-badge">
+      <svg viewBox="0 0 24 24" class="ic"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </span>
+    <div>
+      <b data-i18n="slice.title">Just sliced</b>
+      <small id="sliceWhen"></small>
+    </div>
+  </div>
+  <div class="slice-body">
+    <div class="slice-project" id="sliceProject"></div>
+    <div class="slice-chips" id="sliceChips"></div>
+  </div>
+  <div class="slice-foot">
+    <button class="btn ghost sm" id="sliceLater" data-i18n="slice.later">Not now</button>
+    <button class="btn primary sm" id="sliceAdd" data-i18n="slice.add">Log this print</button>
   </div>
 </div>
 
