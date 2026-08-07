@@ -30,9 +30,50 @@ from datetime import datetime
 CACHE_DIRNAME = "bamboo_model"
 
 
-def cache_dir() -> str:
-    """Where Bambu Studio drops each slice."""
-    return os.path.join(tempfile.gettempdir(), CACHE_DIRNAME)
+def candidate_dirs() -> list:
+    """The folders a Bambu Studio slice cache is normally found in.
+
+    Usually one: %TEMP%\bamboo_model. The second entry matters when TEMP has
+    been redirected somewhere else, which leaves the slices behind in the
+    account's own temp folder.
+    """
+    seen, out = set(), []
+    bases = [tempfile.gettempdir(),
+             os.path.join(os.environ.get("LOCALAPPDATA", ""), "Temp")]
+    for base in bases:
+        if not base:
+            continue
+        path = os.path.join(base, CACHE_DIRNAME)
+        key = os.path.normcase(os.path.abspath(path))
+        if key not in seen:
+            seen.add(key)
+            out.append(path)
+    return out
+
+
+def cache_dir(custom: str = "") -> str:
+    """The folder to watch: the one set by hand, or the first that exists.
+
+    A folder set by hand is returned whether it exists or not, so the interface
+    can say it is wrong instead of silently going back to the default.
+    """
+    if custom:
+        return custom
+    found = [p for p in candidate_dirs() if os.path.isdir(p)]
+    return found[0] if found else candidate_dirs()[0]
+
+
+def folder_status(custom: str = "") -> dict:
+    """What the interface needs to show about the folder being watched."""
+    path = cache_dir(custom)
+    exists = os.path.isdir(path)
+    plates = 0
+    if exists:
+        for _dirpath, _dirs, files in os.walk(path):
+            plates += sum(1 for f in files if f.lower().endswith(".3mf"))
+    return {"path": path, "exists": exists,
+            "custom": bool(custom), "plates": plates,
+            "candidates": candidate_dirs()}
 
 
 def _attrs(fragment: str) -> dict:
@@ -123,9 +164,9 @@ def _profiles(z, names) -> list:
     return [str(x) for x in ids] if isinstance(ids, list) else []
 
 
-def latest_slices(limit: int = 8, since: float = 0) -> list:
+def latest_slices(limit: int = 8, since: float = 0, custom: str = "") -> list:
     """The most recently sliced projects, newest first."""
-    root = cache_dir()
+    root = cache_dir(custom)
     if not os.path.isdir(root):
         return []
     found = []

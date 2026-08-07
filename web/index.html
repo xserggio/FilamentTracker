@@ -237,6 +237,16 @@
           <label class="toggle"><input type="checkbox" id="setSlicerWatch">
             <span><span data-i18n="set.slicerWatch">Offer a print after slicing</span>
               <i class="hint" data-i18n="set.slicerWatchHint"></i></span></label>
+          <h3 class="sub-head" data-i18n="set.folder">Folder it reads</h3>
+          <p class="muted dry-help" data-i18n="set.folderHelp"></p>
+          <div class="folder-row">
+            <input type="text" id="setSlicerDir" class="folder-path"
+                   spellcheck="false" autocomplete="off">
+            <button class="btn" id="btnPickSlicerDir" data-i18n="set.folderPick">Choose…</button>
+            <button class="btn ghost" id="btnResetSlicerDir" data-i18n="set.folderAuto">Find it for me</button>
+          </div>
+          <p class="folder-state" id="slicerDirState"></p>
+
           <h3 class="sub-head" data-i18n="set.learned">Remembered spools</h3>
           <p class="muted dry-help" data-i18n="set.learnedHelp"></p>
           <div id="learnedList" class="learned"></div>

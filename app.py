@@ -21,6 +21,7 @@ WEB_DIR = os.path.join(APP_DIR, "web")
 _FD = getattr(webview, "FileDialog", None)
 DLG_OPEN = _FD.OPEN if _FD else webview.OPEN_DIALOG
 DLG_SAVE = _FD.SAVE if _FD else webview.SAVE_DIALOG
+DLG_FOLDER = _FD.FOLDER if _FD else webview.FOLDER_DIALOG
 
 
 def ok(data=None, **extra):
@@ -269,8 +270,10 @@ class Api:
             if data.get("all"):
                 since = 0.0
             fils = s.filaments()
+            folder = s.get_settings().get("slicer_dir", "")
             out = []
-            for sl in slicer.latest_slices(limit=int(data.get("limit") or 3), since=since):
+            for sl in slicer.latest_slices(limit=int(data.get("limit") or 3),
+                                           since=since, custom=folder):
                 for item in sl["items"]:
                     sig = slicer.signature(item)
                     item["signature"] = sig
@@ -279,6 +282,22 @@ class Api:
             return ok(out)
         except Exception as e:
             traceback.print_exc()
+            return err(e)
+
+    def slicer_folder(self, data=None):
+        """Which folder is being watched, whether it is there and what is in it."""
+        try:
+            return ok(slicer.folder_status(
+                self._store.get_settings().get("slicer_dir", "")))
+        except Exception as e:
+            return err(e)
+
+    def pick_slicer_folder(self):
+        """Let the user point at the folder themselves when the guess is wrong."""
+        try:
+            paths = self._window.create_file_dialog(DLG_FOLDER)
+            return ok(paths[0] if paths else None)
+        except Exception as e:
             return err(e)
 
     def dismiss_slice(self, data):
