@@ -64,6 +64,14 @@ function fmonth(ym) {
   if (isNaN(d)) return ym;
   return d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' });
 }
+// Catalogue temperatures are Celsius; the setting only changes how they read.
+function temp(c) {
+  if (c == null) return '—';
+  return (S.settings.temp_unit === 'F')
+    ? Math.round(c * 9 / 5 + 32) + ' °F'
+    : Math.round(c) + ' °C';
+}
+
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => todayISO().slice(0, 8) + '01';
 
@@ -479,6 +487,24 @@ function renderInventory() {
 
 
 /* ---------- MODAL: filament detail sheet ---------- */
+
+/* Printing settings, with where they came from spelled out: a figure published
+   by the manufacturer and a generic guess for the material should not look the
+   same on screen. */
+function specsBlock(sp, fil) {
+  if (!sp || (sp.extruder == null && sp.density == null)) return '';
+  const src = sp.source === 'generic' || sp.source === 'none'
+    ? t(sp.source === 'none' ? 'detail.specsNone' : 'detail.specsGeneric', { mat: fil.material })
+    : t('detail.specsFrom', { brand: sp.brand || fil.roll_brand || '', product: sp.product || '' });
+  return `
+    <h3 class="sub-head">${esc(t('detail.printing'))}<small>${esc(src)}</small></h3>
+    <div class="det-specs">
+      ${sp.extruder != null ? `<span class="spec"><i>${esc(t('detail.nozzle'))}</i><b>${esc(temp(sp.extruder))}</b></span>` : ''}
+      ${sp.bed != null ? `<span class="spec"><i>${esc(t('detail.bed'))}</i><b>${esc(temp(sp.bed))}</b></span>` : ''}
+      ${sp.density != null ? `<span class="spec"><i>${esc(t('detail.density'))}</i><b>${
+        sp.density.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} g/cm³</b></span>` : ''}
+    </div>`;
+}
 async function openDetail(f) {
   if (!f) return;
   S.detailTarget = f.id;
@@ -508,6 +534,8 @@ async function openDetail(f) {
         <div class="bar"><i style="width:${Math.min(100, fil.pct)}%;background:${col}"></i></div>
       </div>
     </div>
+
+    ${specsBlock(d.specs, fil)}
 
     <h3 class="sub-head">${esc(t('detail.rolls'))}</h3>
     ${d.rolls.length ? `<div class="det-rolls">${d.rolls.map((r) => `
@@ -748,6 +776,7 @@ function renderSettings() {
   $('#setLang').innerHTML = Object.entries(LANGS)
     .map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('');
   $('#setLang').value = S.lang;
+  $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
   $('#dbPath').textContent = S.dbPath || '—';
@@ -863,12 +892,35 @@ function openFilament(f) {
   $('#fNotes').value = f ? f.notes : '';
   $('#fArchived').checked = f ? !!f.archived : false;
   setHex(f ? f.hex : '#8a8f96');
+  loadCatalog(f ? f.hex : '');
   $('#fDelete').hidden = !f;
   show('#filModal');
   setTimeout(() => $(f ? '#fColor' : '#fMaterial').focus(), 60);
 }
 
 function setHex(v) { $('#fHex').value = v; $('#fHexTxt').value = v; }
+
+/* The manufacturer's own colour list, loaded whenever brand or material changes.
+   Picking one writes the exact hex the maker publishes, which is what later lets
+   a colour coming from somewhere else be matched against the inventory. */
+async function loadCatalog(selected) {
+  const sel = $('#fCatalog');
+  const brand = readBrand('#fBrand', '#fBrandOther');
+  const material = $('#fMaterial').value.trim();
+  sel.innerHTML = `<option value="">${esc(t('fil.catalogPick'))}</option>`;
+  sel.disabled = true;
+  if (!brand) return;
+  const list = await call('catalog_colors', { brand, material });
+  if (failed(list) || !list || !list.length) {
+    sel.innerHTML = `<option value="">${esc(t('fil.catalogNone'))}</option>`;
+    return;
+  }
+  sel.innerHTML = `<option value="">${esc(t('fil.catalogPick'))}</option>` +
+    list.map((c) => `<option value="${esc(c.hex)}"${
+      c.hex.toLowerCase() === String(selected || '').toLowerCase() ? ' selected' : ''
+    } data-name="${esc(c.name)}">${esc(c.name)} · ${esc(c.hex)}</option>`).join('');
+  sel.disabled = false;
+}
 
 async function saveFilament() {
   const data = {
@@ -1065,7 +1117,15 @@ function wire() {
   $('#failSave').onclick = saveFail;
 
   $('#fSave').onclick = saveFilament;
-  wireBrand('#fBrand', '#fBrandOther');
+  wireBrand('#fBrand', '#fBrandOther', () => loadCatalog($('#fHexTxt').value));
+  $('#fMaterial').onchange = () => loadCatalog($('#fHexTxt').value);
+  $('#fCatalog').onchange = (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (!e.target.value) return;
+    setHex(e.target.value);
+    // the catalogue name is a better colour name than anything typed by hand
+    if (opt && opt.dataset.name) $('#fColor').value = opt.dataset.name;
+  };
   $('#fHex').oninput = (e) => { $('#fHexTxt').value = e.target.value; };
   $('#fHexTxt').oninput = (e) => {
     if (/^#[0-9a-f]{6}$/i.test(e.target.value)) $('#fHex').value = e.target.value;
@@ -1110,6 +1170,7 @@ function wire() {
   $('#saveSettings').onclick = async () => {
     const r = await call('save_settings', {
       lang: $('#setLang').value,
+      temp_unit: $('#setTempUnit').value,
       low_threshold_pct: Number($('#setLow').value) || 15,
       default_spool_g: Number($('#setSpool').value) || 1000,
     });

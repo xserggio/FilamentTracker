@@ -177,6 +177,14 @@
               <small data-i18n="set.langHelp"></small>
             </label>
             <label class="field">
+              <span data-i18n="set.tempUnit">Temperature unit</span>
+              <select id="setTempUnit" class="select">
+                <option value="C">°C</option>
+                <option value="F">°F</option>
+              </select>
+              <small data-i18n="set.tempUnitHelp"></small>
+            </label>
+            <label class="field">
               <span data-i18n="set.low">Low spool warning (%)</span>
               <input type="number" id="setLow" min="1" max="90" step="1">
               <small data-i18n="set.lowHelp"></small>
@@ -344,6 +352,7 @@
         </label>
         <label class="field"><span data-i18n="fil.hex">On-screen colour</span>
           <div class="color-row"><input type="color" id="fHex"><input type="text" id="fHexTxt" spellcheck="false"></div>
+          <select id="fCatalog" class="cat-sel"></select>
         </label>
       </div>
       <div class="form-grid">

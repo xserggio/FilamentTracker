@@ -11,6 +11,7 @@ import webview
 
 from core import (APP_DIR, DB_PATH, DRY_DAYS, SPOOL_TYPES, Store,
                   clean_url, detect_lang, guess_hex)
+import catalog
 from importer import import_excel
 
 WEB_DIR = os.path.join(APP_DIR, "web")
@@ -192,6 +193,7 @@ class Api:
                 "filament": fil,
                 "rolls": self._store.roll_history(fid),
                 "prints": self._store.filament_prints(fid),
+                "specs": catalog.specs(fil["roll_brand"], fil["material"], fil["name"]),
             })
         except Exception as e:
             traceback.print_exc()
@@ -215,6 +217,32 @@ class Api:
         try:
             os.startfile(self._store.backup_info()["dir"])
             return ok()
+        except Exception as e:
+            return err(e)
+
+    def catalog_colors(self, data):
+        """The colours this manufacturer actually sells, for the colour picker."""
+        try:
+            return ok(catalog.colors(data.get("brand", ""), data.get("material")))
+        except Exception as e:
+            return err(e)
+
+    def filament_specs(self, data):
+        """Printing temperatures and density, saying where each number came from."""
+        try:
+            return ok(catalog.specs(data.get("brand"), data.get("material"),
+                                    data.get("name", "")))
+        except Exception as e:
+            return err(e)
+
+    def match_color(self, data):
+        """Rank the inventory by how close each spool looks to a colour."""
+        try:
+            res = catalog.match_color(data.get("hex", ""), self._store.filaments(),
+                                      data.get("material"))
+            return ok([{"id": r["filament"]["id"], "name": r["filament"]["name"],
+                        "hex": r["filament"]["hex"], "delta": r["delta"],
+                        "same_material": r["same_material"]} for r in res[:8]])
         except Exception as e:
             return err(e)
 
