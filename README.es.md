@@ -119,7 +119,8 @@ bobina sin borrar el historial.
 <img src="docs/inventory.png" alt="Inventario">
 
 Una tarjeta por filamento, con el nivel del rollo puesto y una barra que pasa a
-ámbar y luego a rojo según se vacía. Al pulsar el nombre se abre su **ficha**: todos
+ámbar y luego a rojo según se vacía. Al pulsar en cualquier punto de la tarjeta se
+abre su **ficha**: todos
 los rollos que ha tenido, con su marca, cuánto se consumió de cada uno y cuántos
 días duró, más la lista de impresiones que lo usaron.
 
@@ -204,6 +205,11 @@ esté mal se olvida de un clic.
 El aviso se puede apagar en Ajustes › Bambu Studio. *Ahora no* lo esconde y vuelve
 a la siguiente; la **×** descarta ese laminado para siempre. Un laminado que no
 llegaste a imprimir simplemente no se confirma nunca.
+
+**La carpeta.** La encuentra sola, y en ese mismo panel se ve cuál está usando y
+cuántas placas laminadas hay dentro — así, si el aviso no aparece nunca, puedes
+ver si está leyendo una carpeta vacía o la que no es. Se cambia con **Elegir…** y
+se vuelve a lo automático con **Que la busque él**.
 
 Esto lee la carpeta temporal del propio Bambu Studio, que no es una interfaz
 documentada. Si una versión futura la cambia de sitio, el aviso deja de aparecer y

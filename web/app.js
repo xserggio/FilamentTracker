@@ -436,10 +436,11 @@ function renderInventory() {
 
   $('#filamentCards').innerHTML = list.length ? list.map((f) => {
     const col = statusColor(f);
-    return `<div class="fcard ${f.low || f.empty ? 'is-low' : ''} ${f.archived ? 'is-archived' : ''}">
+    return `<div class="fcard ${f.low || f.empty ? 'is-low' : ''} ${f.archived ? 'is-archived' : ''}"
+                 data-detail="${f.id}">
       <div class="fcard-top">
         <span class="swatch" style="background:${esc(f.hex)}"></span>
-        <span class="fcard-title" data-detail="${f.id}" role="button">
+        <span class="fcard-title" role="button" tabindex="0">
           <b title="${esc(f.name)}">${esc(f.name)}</b>
           <span class="fcard-meta">
             <span class="tag">${esc(f.material)}</span>
@@ -481,7 +482,20 @@ function renderInventory() {
 
   const find = (id) => S.filaments.find((f) => f.id == id);
   $$('#filamentCards [data-edit]').forEach((b) => { b.onclick = () => openFilament(find(b.dataset.edit)); });
-  $$('#filamentCards [data-detail]').forEach((b) => { b.onclick = () => openDetail(find(b.dataset.detail)); });
+  // The whole card opens the sheet, not just the name: everything on it is
+  // about that filament, and hunting for the one word that was clickable was
+  // needless. The controls in the footer keep their own jobs.
+  $$('#filamentCards [data-detail]').forEach((card) => {
+    const open = () => openDetail(find(card.dataset.detail));
+    card.onclick = (e) => {
+      if (e.target.closest('button, .stepper, input, select, a, textarea')) return;
+      open();
+    };
+    const title = card.querySelector('.fcard-title');
+    if (title) title.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    };
+  });
   $$('#filamentCards [data-roll]').forEach((b) => { b.onclick = () => openRoll(find(b.dataset.roll)); });
   $$('#filamentCards [data-adjust]').forEach((b) => {
     b.onclick = () => openRoll(find(b.dataset.adjust), 'adjust');
@@ -820,6 +834,8 @@ function renderSettings() {
   }).join('');
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
+  $('#setSlicerDir').value = S.settings.slicer_dir || '';
+  renderSlicerFolder();
   renderLearned();
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
@@ -1207,6 +1223,33 @@ async function saveRoll() {
   await reload();
 }
 
+/* The folder is found on its own, but the guess can be wrong -- a portable
+   install, a redirected TEMP -- and there was no way to see which one it landed
+   on, let alone correct it. This shows the path in use and what is in it. */
+async function renderSlicerFolder() {
+  const st = await call('slicer_folder');
+  const el = $('#slicerDirState');
+  if (failed(st) || !st) { el.textContent = ''; return; }
+  // the field stays empty while the folder is the one found automatically, so
+  // "find it for me" is the visible default rather than a path frozen in place
+  $('#setSlicerDir').placeholder = st.path;
+  el.classList.toggle('bad', !st.exists || !st.plates);
+  el.textContent = !st.exists ? t('set.folderMissing')
+    : !st.plates ? t('set.folderEmpty')
+      : t('set.folderOk', { n: st.plates });
+}
+
+async function saveSlicerDir(dir) {
+  const r = await call('save_settings', { slicer_dir: dir });
+  if (failed(r)) return;
+  S.settings.slicer_dir = dir;
+  $('#setSlicerDir').value = dir;
+  await renderSlicerFolder();
+  S.slice = null;            // the next check looks in the new folder
+  checkSlices();
+  toast(t('toast.folderSaved'));
+}
+
 /* Every confirmation given on a slice, so a wrong one can be undone. */
 async function renderLearned() {
   const list = await call('learned_matches');
@@ -1247,6 +1290,14 @@ function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
   $('#ctaNewPrint').onclick = () => openPrint(null);
+
+  $('#btnPickSlicerDir').onclick = async () => {
+    const dir = await call('pick_slicer_folder');
+    if (failed(dir) || !dir) return;
+    saveSlicerDir(dir);
+  };
+  $('#btnResetSlicerDir').onclick = () => saveSlicerDir('');
+  $('#setSlicerDir').onchange = (e) => saveSlicerDir(e.target.value.trim());
 
   $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);
   $('#sliceLater').onclick = () => hideSliceCard(false);
