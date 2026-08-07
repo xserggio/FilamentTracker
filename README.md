@@ -119,7 +119,7 @@ without wiping your history.
 <img src="docs/inventory.png" alt="Inventory">
 
 One card per filament, with the level of the fitted roll and a bar that turns amber
-and then red as it empties. Click the name to open its **detail sheet**: every roll
+and then red as it empties. Click anywhere on the card to open its **detail sheet**: every roll
 it has had, with brand, how much was consumed from each and how long it lasted, plus
 the list of prints that used it.
 
@@ -202,6 +202,11 @@ anything wrong can be forgotten with one click.
 The card can be switched off in Settings › Bambu Studio. *Not now* hides it and
 brings it back next time; the **×** dismisses that slice for good. A slice you
 never printed is simply never confirmed.
+
+**The folder.** Found on its own, and the same panel shows which one is in use
+and how many sliced plates are in it — so if the card never appears you can see
+whether it is reading an empty folder or the wrong one. Point it somewhere else
+with **Choose…**, or put it back with **Find it for me**.
 
 This reads Bambu Studio's own temporary folder, which is not a documented
 interface. If a future version moves it, the card just stops appearing — nothing
