@@ -2,8 +2,10 @@
 # Uso:  powershell -ExecutionPolicy Bypass -File build.ps1
 Set-Location $PSScriptRoot
 
-Get-Process -EA SilentlyContinue |
-    Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
+# Solo el ejecutable compilado, por nombre de proceso. Filtrar por titulo de
+# ventana alcanzaba a cualquier programa que tuviera "Filament Tracker" en el
+# suyo -- un navegador con el repo abierto, sin ir mas lejos.
+Get-Process -Name "Filament Tracker" -EA SilentlyContinue | Stop-Process -Force
 
 py -m PyInstaller --noconfirm --clean --onefile --windowed `
     --name "Filament Tracker" `

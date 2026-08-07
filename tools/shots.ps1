@@ -38,11 +38,20 @@ $steps = @(
   @{ name = "sliceform"; js = "setView('dashboard'); setTimeout(() => document.getElementById('sliceAdd').click(), 6000);"; db = $WATCH }
 )
 
+# Restos de una tanda anterior. Se filtra por nombre de proceso: por titulo de
+# ventana alcanzaba a cualquier programa con "Filament Tracker" en el suyo, y el
+# titulo de un navegador es el de su pestana activa.
+function Stop-AppLeftovers {
+    Get-Process -EA SilentlyContinue |
+        Where-Object { $_.ProcessName -in @("pythonw", "python", "Filament Tracker") -and
+                       $_.MainWindowTitle -eq "Filament Tracker" } |
+        Stop-Process -Force
+}
+
 Copy-Item "web\app.js" "web\_app.js.bak" -Force
 
 foreach ($s in $steps) {
-    Get-Process -EA SilentlyContinue |
-        Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
+    Stop-AppLeftovers
     Copy-Item "web\_app.js.bak" "web\app.js" -Force
     if ($s.db) { py -c "from core import Store; Store('data/filaments.db').set_settings($($s.db))" }
     Add-Content "web\app.js" "`nwindow.addEventListener('load', () => setTimeout(() => { try { $($s.js) } catch(e){} }, 1200));"
@@ -71,5 +80,4 @@ foreach ($s in $steps) {
 Copy-Item "web\_app.js.bak" "web\app.js" -Force
 Remove-Item "web\_app.js.bak" -Force
 py -c "from core import Store; Store('data/filaments.db').set_settings({'slicer_watch':'0','slicer_dir':''})"
-Get-Process -EA SilentlyContinue |
-    Where-Object { $_.MainWindowTitle -eq "Filament Tracker" } | Stop-Process -Force
+Stop-AppLeftovers
