@@ -204,9 +204,9 @@ The card can be switched off in Settings › Bambu Studio. *Not now* puts that
 slice aside for the rest of the session and offers it again next launch; the
 **×** dismisses it for good. A slice you never printed is simply never confirmed.
 
-**From a slice.** The card only offers the newest plate, and only once. In
-History, next to *New print*, **From a slice** lists everything still in the
-folder — so one you put aside, or one sliced while the app was closed, can still
+**View Bambu slices.** The card only offers the newest plate, and only once. In
+History, next to *New print*, **View Bambu slices** lists everything still in
+the folder — so one you put aside, or one sliced while the app was closed, can still
 be logged. It appears only if there is a folder with plates in it.
 
 **The folder.** Found on its own, and the same panel shows which one is in use
