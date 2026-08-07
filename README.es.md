@@ -47,25 +47,41 @@ secarlo bastante más a menudo que el PLA.
 
 ## Descargar
 
-Coge `Filament Tracker.exe` de la
-[última versión](../../releases/latest). Es un único archivo: sin instalador y sin
-necesidad de Python. Solo Windows 10/11 (usa el runtime WebView2 que viene de serie
-en Windows 11).
+**1.** Descarga **`Filament Tracker.exe`** de la
+[última versión](../../releases/latest).
 
-> Conserva la carpeta `data` que aparece junto al ejecutable: ahí está tu base de
-> datos. Si mueves la app a otro sitio, llévate esa carpeta con ella.
+**2.** Ponlo donde quieras: el Escritorio, Documentos, un pendrive.
 
-### Ejecutar desde el código
+**3.** Doble clic. Ya está.
 
-```bash
-git clone https://github.com/xserggio/FilamentTracker.git
-cd FilamentTracker
-py -m pip install -r requirements.txt
-py app.py
-```
+Sin instalador, sin Python y sin línea de comandos. Es un solo archivo; la primera
+vez que lo abras aparecerá a su lado una carpeta `data` con tu base de datos dentro.
 
-Necesita Python 3.10 o superior y las dos dependencias de `requirements.txt`
-(`pywebview` y `openpyxl`).
+<details>
+<summary><b>Windows dice «Windows protegió tu PC»</b></summary>
+
+Es SmartScreen, y dice eso de cualquier programa que no haya pagado un certificado
+de firma de código. Pulsa **Más información** y luego **Ejecutar de todas formas**.
+
+Si prefieres no fiarte de mi palabra, el código está entero aquí y puedes
+[compilar el ejecutable tú mismo](#compilar-el-ejecutable).
+</details>
+
+<details>
+<summary><b>No pasa nada, o menciona WebView2</b></summary>
+
+La app dibuja su interfaz con el runtime WebView2 de Microsoft. Windows 11 lo trae
+de serie; algunas instalaciones de Windows 10 no. Si falta, la app te lo dice y te
+ofrece abrir la [página de descarga](https://developer.microsoft.com/microsoft-edge/webview2/) —
+instálalo y vuelve a abrirla.
+</details>
+
+<details>
+<summary><b>Mover la app a otra carpeta u otro PC</b></summary>
+
+Llévate la carpeta `data` con ella. Esa carpeta es tu base de datos; si la dejas
+atrás, la app arrancará vacía.
+</details>
 
 ---
 
@@ -215,7 +231,21 @@ visor de SQLite vale.
 
 ---
 
-## Compilar el ejecutable
+## Para desarrolladores
+
+### Ejecutar desde el código
+
+```bash
+git clone https://github.com/xserggio/FilamentTracker.git
+cd FilamentTracker
+py -m pip install -r requirements.txt
+py app.py
+```
+
+Python 3.10 o superior y las dos dependencias de `requirements.txt` (`pywebview` y
+`openpyxl`).
+
+### Compilar el ejecutable
 
 ```bash
 py -m pip install pyinstaller

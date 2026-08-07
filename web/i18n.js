@@ -276,7 +276,7 @@ const I18N = {
     'toast.needProject': 'Falta el nombre del proyecto',
     'toast.needItems': 'Añade al menos un filamento con gramos',
     'toast.needColor': 'Indica al menos el color',
-    'toast.firstImport': 'Empieza importando tu Excel desde Ajustes',
+    'toast.firstRun': 'Añade tu primer filamento, o importa una hoja de cálculo desde Ajustes',
   },
 
   en: {
@@ -543,7 +543,7 @@ const I18N = {
     'toast.needProject': 'The project name is missing',
     'toast.needItems': 'Add at least one filament with grams',
     'toast.needColor': 'Enter at least the colour',
-    'toast.firstImport': 'Start by importing your Excel from Settings',
+    'toast.firstRun': 'Add your first filament, or import a spreadsheet from Settings',
   },
 
   fr: {
@@ -810,7 +810,7 @@ const I18N = {
     'toast.needProject': 'Le nom du projet manque',
     'toast.needItems': 'Ajoutez au moins un filament avec des grammes',
     'toast.needColor': 'Indiquez au moins la couleur',
-    'toast.firstImport': 'Commencez par importer votre Excel depuis les Réglages',
+    'toast.firstRun': 'Ajoutez votre premier filament, ou importez un tableur depuis les Réglages',
   },
 
   de: {
@@ -1077,7 +1077,7 @@ const I18N = {
     'toast.needProject': 'Der Projektname fehlt',
     'toast.needItems': 'Mindestens ein Filament mit Gramm hinzufügen',
     'toast.needColor': 'Mindestens die Farbe angeben',
-    'toast.firstImport': 'Beginnen Sie mit dem Excel-Import in den Einstellungen',
+    'toast.firstRun': 'Legen Sie Ihr erstes Filament an oder importieren Sie eine Tabelle in den Einstellungen',
   },
 
   pt: {
@@ -1344,7 +1344,7 @@ const I18N = {
     'toast.needProject': 'Falta o nome do projeto',
     'toast.needItems': 'Adiciona pelo menos um filamento com gramas',
     'toast.needColor': 'Indica pelo menos a cor',
-    'toast.firstImport': 'Começa por importar o teu Excel nas Definições',
+    'toast.firstRun': 'Adiciona o teu primeiro filamento, ou importa uma folha de cálculo nas Definições',
   },
 
   it: {
@@ -1611,6 +1611,6 @@ const I18N = {
     'toast.needProject': 'Manca il nome del progetto',
     'toast.needItems': 'Aggiungi almeno un filamento con i grammi',
     'toast.needColor': 'Indica almeno il colore',
-    'toast.firstImport': 'Inizia importando il tuo Excel dalle Impostazioni',
+    'toast.firstRun': 'Aggiungi il tuo primo filamento, o importa un foglio di calcolo dalle Impostazioni',
   },
 };

@@ -1,7 +1,8 @@
-"""Capa de datos: esquema SQLite y toda la lógica de inventario/historial."""
+"""Data layer: SQLite schema and all the inventory/history logic."""
 
 import glob
 import json
+import locale
 import os
 import re
 import shutil
@@ -13,10 +14,10 @@ FROZEN = getattr(sys, "frozen", False)
 
 
 def _res_dir() -> str:
-    """Recursos de solo lectura (web/, icono).
+    """Read-only resources (web/, icon).
 
-    Empaquetado con PyInstaller viven dentro del bundle, que en modo onefile es
-    una carpeta temporal que se extrae en cada arranque.
+    Packaged with PyInstaller these live inside the bundle, which in onefile mode
+    is a temporary folder extracted on every launch.
     """
     if FROZEN:
         return getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
@@ -24,7 +25,7 @@ def _res_dir() -> str:
 
 
 def _data_dir() -> str:
-    """Datos que hay que conservar: siempre junto al .exe, nunca en el bundle."""
+    """Data that must survive: always next to the .exe, never inside the bundle."""
     root = os.path.dirname(sys.executable) if FROZEN \
         else os.path.dirname(os.path.abspath(__file__))
     return os.path.join(root, "data")
@@ -59,8 +60,8 @@ CREATE TABLE IF NOT EXISTS rolls (
 );
 CREATE INDEX IF NOT EXISTS idx_rolls_fil ON rolls(filament_id, opened_at);
 
--- Cada rollo sin estrenar es una fila: así un mismo color puede tener repuestos
--- de marcas (o gramajes) distintos al rollo que está puesto.
+-- Every unopened spool is a row, so one colour can have spares from a different
+-- brand (or weight) than the roll currently fitted.
 CREATE TABLE IF NOT EXISTS spares (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     filament_id   INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
@@ -95,43 +96,43 @@ CREATE TABLE IF NOT EXISTS settings (
 """
 
 DEFAULT_SETTINGS = {
-    "low_threshold_pct": "15",     # % por debajo del cual el rollo se marca como bajo
-    "default_spool_g": "1000",     # peso por defecto de un rollo nuevo
-    "warn_no_stock": "1",          # avisar si un rollo va bajo y no hay repuesto
-    "lang": "es",                  # idioma de la interfaz
+    "low_threshold_pct": "15",     # below this % a roll is flagged as low
+    "default_spool_g": "1000",     # default weight of a new roll
+    "warn_no_stock": "1",          # warn when a roll runs low with no spare
+    "lang": "",                    # interface language ("" = detect from the OS)
 }
 
-# Días que aguanta un rollo abierto antes de convenir secarlo, por familia de
-# plástico. El PLA es tolerante; el PETG bastante menos; el nylon y los solubles
-# absorben humedad en cuestión de días. Es el conocimiento de partida de la app:
-# se copia a los ajustes en el primer arranque y desde ahí se puede cambiar.
+# How long an open spool lasts before it is worth drying, by plastic family.
+# PLA is forgiving; PETG much less so; nylon and the solubles soak up moisture
+# in a matter of days. This is the app's starting knowledge: it is copied into
+# settings on first launch and can be changed from there.
 DRY_DAYS = {
-    # --- PLA y variantes ---
+    # --- PLA and its variants ---
     "PLA": 60, "PLA+": 60, "PLA HS": 60, "PLA Silk": 60, "PLA Matte": 60,
     "PLA Glow": 45, "PLA Marble": 45, "PLA-CF": 45, "PLA Metal": 30, "PLA Wood": 30,
-    # --- poliésteres ---
+    # --- polyesters ---
     "PETG": 30, "PETG-CF": 25, "PCTG": 25, "PET": 20,
-    # --- estirénicos ---
+    # --- styrenics ---
     "ABS": 45, "ABS-GF": 40, "ASA": 45, "HIPS": 45,
     # --- flexibles ---
     "TPU": 14, "TPE": 14,
-    # --- ingeniería ---
+    # --- engineering ---
     "PC": 14, "PC-CF": 12, "PP": 30, "PPS-CF": 12, "PEEK": 10, "PEI": 10,
-    # --- poliamidas: las más higroscópicas ---
+    # --- polyamides: the thirstiest of the lot ---
     "PA": 7, "PA-CF": 7, "PA6": 7, "PA12": 10, "Nylon": 7,
-    # --- solubles de soporte ---
+    # --- soluble supports ---
     "PVA": 5, "BVOH": 5, "Support": 30,
 }
 DRY_FALLBACK = 45
 
-# Peso del carrete vacío (tara) en gramos, por marca y tipo de bobina.
+# Empty spool weight (tare) in grams, by brand and spool type.
 #
-# Fuentes: SpoolmanDB (github.com/Donkie/SpoolmanDB, base curada por la comunidad),
-# contrastado con theemptyspool.cc y el foro de Bambu Lab. Ojo: la dispersión es
-# grande incluso dentro de una marca —Bambu va de 196 g en cartón a 253 g en
-# plástico, eSUN de 161 a 253— porque cambian el molde entre versiones. Son valores
-# de partida: en cuanto peses un carrete tuyo, la app guarda ese número y usa el
-# tuyo. Los generic_* son el último recurso para marcas desconocidas.
+# Sources: SpoolmanDB (github.com/Donkie/SpoolmanDB, community-curated), cross-
+# checked against theemptyspool.cc and the Bambu Lab forum. Beware: the spread is
+# wide even within one brand -- Bambu ranges from 196 g in cardboard to 253 g in
+# plastic, eSUN from 161 to 253 -- because the tooling changes between versions.
+# These are starting points: the moment the user weighs one of their own spools,
+# the app stores that figure and uses it instead.
 SPOOL_TARE = {
     "Bambu Lab":  {"plastic": 250, "cardboard": 196},
     "eSUN":       {"plastic": 240, "cardboard": 170},
@@ -150,13 +151,38 @@ SPOOL_TARE = {
 TARE_FALLBACK = 220
 TARE_GENERIC = {"plastic": 220, "cardboard": 160, "metal": 320, "other": 220}
 
-# El tipo de bobina cambia la tara tanto como la marca: el mismo eSUN pesa
-# 240 g en plástico y 170 en cartón.
+# Spool type shifts the tare as much as the brand does: the same eSUN weighs
+# 240 g in plastic and 170 in cardboard.
 SPOOL_TYPES = ("plastic", "cardboard", "metal", "other")
 
 
+# Languages the interface ships with. English is the fallback for everyone else.
+SUPPORTED_LANGS = ("en", "es", "fr", "de", "pt", "it")
+
+
+def detect_lang() -> str:
+    """Interface language taken from the OS, falling back to English.
+
+    Only used until the user picks one in Settings; from then on their choice is
+    stored and this is not consulted again.
+    """
+    code = ""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            lcid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            code = locale.windows_locale.get(lcid, "")
+        if not code:
+            code = (locale.getdefaultlocale()[0] or "")
+    except Exception:
+        code = ""
+    two = code.replace("-", "_").split("_")[0].lower()
+    return two if two in SUPPORTED_LANGS else "en"
+
+
 def _norm(s: str) -> str:
-    """Solo letras y dígitos en minúscula: 'Bambu Lab' y 'bambulab' coinciden."""
+    """Letters and digits only, lowercased, so 'Bambu Lab' matches 'bambulab'."""
     return re.sub(r"[^a-z0-9]", "", (s or "").lower())
 
 
@@ -166,14 +192,14 @@ def norm_type(kind: str) -> str:
 
 
 def guess_tare(brand: str, kind: str = "plastic") -> float:
-    """Tara sugerida para una marca. Sin coincidencia, el valor genérico."""
+    """Suggested tare for a brand. Falls back to the generic figure."""
     b = _norm(brand)
     entry = None
     if b:
         table = {_norm(k): v for k, v in SPOOL_TARE.items()}
         entry = table.get(b)
         if entry is None:
-            # 'Bambu Lab PLA Basic' sigue siendo Bambu Lab
+            # 'Bambu Lab PLA Basic' is still Bambu Lab
             for key, val in table.items():
                 if key in b or b in key:
                     entry = val
@@ -182,7 +208,7 @@ def guess_tare(brand: str, kind: str = "plastic") -> float:
         entry = TARE_GENERIC
     return float(entry.get(kind) or next(iter(entry.values()), TARE_FALLBACK))
 
-# Paleta para los colores que ya usas en el Excel
+# Palette for the colour names people typically use
 COLOR_MAP = {
     "black": "#1c1c1e",
     "black matte": "#26262a",
@@ -215,7 +241,7 @@ def guess_hex(color: str) -> str:
     c = (color or "").strip().lower()
     if c in COLOR_MAP:
         return COLOR_MAP[c]
-    # coincidencia parcial: "light blue matte" -> "blue"
+    # partial match: "light blue matte" -> "blue"
     for key in sorted(COLOR_MAP, key=len, reverse=True):
         if key in c:
             return COLOR_MAP[key]
@@ -229,7 +255,7 @@ def clean_url(value: str) -> str:
     """Solo se admiten enlaces http(s).
 
     Si el texto ya trae un esquema distinto (javascript:, file:, ftp:…) se
-    descarta en vez de anteponerle https://, que dejaría pasar basura disfrazada.
+    dropped rather than prefixed with https://, which would let junk through.
     Sin esquema se asume https, que es lo normal al pegar 'printables.com/...'.
     """
     u = (value or "").strip()
@@ -245,7 +271,7 @@ def today() -> str:
 
 
 def days_since(iso: str):
-    """Días transcurridos desde una fecha ISO, o None si no hay fecha válida."""
+    """Days elapsed since an ISO date, or None if there is no valid date."""
     if not iso:
         return None
     try:
@@ -272,22 +298,22 @@ class Store:
         self.db.commit()
         try:
             self.backup()
-        except Exception:      # una copia fallida jamás debe impedir abrir la app
+        except Exception:      # a failed backup must never stop the app opening
             pass
 
     def _migrate(self):
-        """Añade columnas nuevas a bases de datos creadas con versiones anteriores."""
+        """Adds new columns to databases created by earlier versions."""
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
         if "brand" not in cols:
             self.db.execute("ALTER TABLE rolls ADD COLUMN brand TEXT NOT NULL DEFAULT ''")
-            # los rollos existentes heredan la marca que tuviera el filamento
+            # existing rolls inherit whatever brand the filament had
             self.db.execute(
                 "UPDATE rolls SET brand = COALESCE("
                 "(SELECT f.brand FROM filaments f WHERE f.id = rolls.filament_id), '')"
             )
             self.db.commit()
 
-        # el contador entero filaments.stock pasa a ser una fila por repuesto
+        # the filaments.stock integer becomes one row per spare
         done = self.db.execute(
             "SELECT value FROM settings WHERE key='spares_migrated'"
         ).fetchone()
@@ -340,7 +366,11 @@ class Store:
 
     def get_settings(self) -> dict:
         rows = self.db.execute("SELECT key, value FROM settings").fetchall()
-        return {r["key"]: r["value"] for r in rows}
+        out = {r["key"]: r["value"] for r in rows}
+        # an empty lang means "not chosen yet": resolve it from the OS
+        if not out.get("lang"):
+            out["lang"] = detect_lang()
+        return out
 
     def set_settings(self, values: dict):
         for k, v in values.items():
@@ -354,7 +384,7 @@ class Store:
     def is_empty(self) -> bool:
         return self.db.execute("SELECT COUNT(*) c FROM filaments").fetchone()["c"] == 0
 
-    # ---------- filamentos ----------
+    # ---------- filaments ----------
 
     def current_roll(self, filament_id: int):
         return self.db.execute(
@@ -363,7 +393,7 @@ class Store:
         ).fetchone()
 
     def filaments(self, include_archived: bool = True) -> list:
-        """Devuelve cada filamento con su rollo activo y los gramos consumidos de él."""
+        """Every filament with its fitted roll and the grams consumed from it."""
         sql = "SELECT * FROM filaments"
         if not include_archived:
             sql += " WHERE archived=0"
@@ -407,8 +437,8 @@ class Store:
                 "SELECT COUNT(*) c FROM rolls WHERE filament_id=?", (r["id"],)
             ).fetchone()["c"]
 
-            # Un rollo recién abierto viene seco de fábrica, así que si nunca se ha
-            # secado el reloj corre desde la apertura.
+            # A freshly opened spool comes dry from the factory, so if it has never
+            # been dried the clock runs from the opening date.
             dry_limit = int(dry_days.get(r["material"], DRY_FALLBACK))
             since_dry = days_since(dried or opened)
             needs_dry = since_dry is not None and since_dry > dry_limit
@@ -467,7 +497,7 @@ class Store:
         if not name:
             name = f"{material} - {color}".strip(" -")
         if not name:
-            raise ValueError("El filamento necesita un nombre.")
+            raise ValueError("The filament needs a name.")
         hexv = (data.get("hex") or "").strip() or guess_hex(color)
         brand = (data.get("brand") or "").strip()
         cur = self.db.execute(
@@ -501,13 +531,13 @@ class Store:
     def update_filament(self, fid: int, data: dict):
         cur = self.db.execute("SELECT * FROM filaments WHERE id=?", (fid,)).fetchone()
         if cur is None:
-            raise ValueError("Filamento no encontrado.")
+            raise ValueError("Filament not found.")
         name = (data.get("name") or cur["name"]).strip()
         material = (data.get("material") or cur["material"]).strip()
         color = data.get("color", cur["color"]).strip()
         hexv = (data.get("hex") or "").strip() or guess_hex(color)
-        # La marca vive en el rollo; en el filamento se guarda solo como valor
-        # por defecto para los rollos que se abran después.
+        # The brand lives on the roll; on the filament it is only kept as the
+        # default for rolls opened later.
         brand = data.get("brand", cur["brand"]).strip()
         self.db.execute(
             "UPDATE filaments SET name=?, material=?, color=?, hex=?, brand=?, stock=?, "
@@ -524,7 +554,7 @@ class Store:
                 fid,
             ),
         )
-        # el peso/fecha del rollo activo se pueden retocar desde el mismo diálogo
+        # the fitted roll's weight and date are editable from the same dialog
         roll = self.current_roll(fid)
         if roll is not None:
             weight = float(data.get("roll_weight", roll["weight"]) or roll["weight"])
@@ -542,7 +572,7 @@ class Store:
         self.db.execute("DELETE FROM filaments WHERE id=?", (fid,))
         self.db.commit()
 
-    # ---------- repuestos ----------
+    # ---------- spares ----------
 
     def default_brand(self, fid: int) -> str:
         roll = self.current_roll(fid)
@@ -572,7 +602,7 @@ class Store:
                      spool_type: str = None):
         cur = self.db.execute("SELECT * FROM spares WHERE id=?", (sid,)).fetchone()
         if cur is None:
-            raise ValueError("Ese repuesto ya no existe.")
+            raise ValueError("That spare no longer exists.")
         self.db.execute(
             "UPDATE spares SET brand=?, weight=?, spool_type=? WHERE id=?",
             ((brand if brand is not None else cur["brand"]).strip(),
@@ -586,8 +616,8 @@ class Store:
         self.db.commit()
 
     def set_stock(self, fid: int, stock: int):
-        """Cuadra el número de repuestos con el pedido: los nuevos heredan la marca
-        del rollo puesto y los que sobran se quitan empezando por el último."""
+        """Reconciles the number of spares with the requested count: new ones
+        inherit the fitted roll's brand, extras are removed newest first."""
         stock = max(0, int(stock))
         have = [r["id"] for r in self.db.execute(
             "SELECT id FROM spares WHERE filament_id=? ORDER BY id", (fid,))]
@@ -599,15 +629,15 @@ class Store:
                 self.db.execute("DELETE FROM spares WHERE id=?", (sid,))
         self.db.commit()
 
-    # ---------- rollos ----------
+    # ---------- rolls ----------
 
     def new_roll(self, fid: int, weight: float = None, opened: str = None,
                  brand: str = None, spare_id: int = None, from_stock: bool = False,
                  spool_type: str = None):
-        """Abre un rollo nuevo: el consumo pasa a contarse desde su fecha de apertura.
+        """Fits a new roll: usage is counted from its opening date onwards.
 
-        Si se indica un repuesto, el rollo hereda su marca y su gramaje (que pueden
-        no coincidir con los del rollo saliente) y ese repuesto se retira del stock.
+        If a spare is given, the roll inherits its brand and weight (which may
+        differ from the outgoing roll) and that spare leaves the stock.
         """
         spare = None
         if spare_id:
@@ -615,7 +645,7 @@ class Store:
                 "SELECT * FROM spares WHERE id=? AND filament_id=?", (spare_id, fid)
             ).fetchone()
             if spare is None:
-                raise ValueError("Ese repuesto ya no está disponible.")
+                raise ValueError("That spare is no longer available.")
 
         if weight is None:
             weight = float(spare["weight"]) if spare else float(
@@ -636,7 +666,7 @@ class Store:
             "VALUES(?,?,?,0,?,'',?)",
             (fid, opened, float(weight), brand, norm_type(spool_type)),
         )
-        # la marca del rollo recién abierto pasa a ser la sugerencia por defecto
+        # the newly fitted roll's brand becomes the default suggestion
         self.db.execute("UPDATE filaments SET brand=? WHERE id=?", (brand, fid))
 
         if spare is not None:
@@ -650,10 +680,10 @@ class Store:
         self.db.commit()
 
     def adjust_roll(self, fid: int, remaining: float, tare: float = 0):
-        """Fija los gramos restantes reales (p. ej. tras pesar el rollo en la báscula)."""
+        """Sets the real remaining grams, e.g. after weighing the spool."""
         roll = self.current_roll(fid)
         if roll is None:
-            raise ValueError("Este filamento no tiene ningún rollo abierto.")
+            raise ValueError("This filament has no roll fitted.")
         used = self.db.execute(
             "SELECT COALESCE(SUM(pi.grams),0) g FROM print_items pi "
             "JOIN prints p ON p.id = pi.print_id "
@@ -664,7 +694,7 @@ class Store:
         self.db.execute("UPDATE rolls SET adjust=? WHERE id=?", (adjust, roll["id"]))
         if tare:
             self.db.execute("UPDATE rolls SET tare=? WHERE id=?", (float(tare), roll["id"]))
-            # la marca aprende de la báscula: sustituye al valor de la tabla
+            # the brand learns from the scale: this replaces the table value
             saved = json.loads(self.get_settings().get("spool_tare") or "{}")
             brand = (roll["brand"] or "").strip()
             kind = norm_type(roll["spool_type"])
@@ -681,7 +711,7 @@ class Store:
         self.db.commit()
 
     def dry_days(self) -> dict:
-        """Días de margen antes de secar, por material. Los ajustes mandan."""
+        """Days of leeway before drying, per material. Settings win."""
         raw = self.get_settings().get("dry_days")
         out = dict(DRY_DAYS)
         if raw:
@@ -703,23 +733,23 @@ class Store:
         self.set_settings({"dry_days": json.dumps(clean)})
 
     def mark_dried(self, fid: int, when: str = None):
-        """Anota que el rollo puesto se ha secado; reinicia el contador de humedad."""
+        """Logs that the fitted roll was dried; resets the moisture clock."""
         roll = self.current_roll(fid)
         if roll is None:
-            raise ValueError("Este filamento no tiene ningún rollo abierto.")
+            raise ValueError("This filament has no roll fitted.")
         self.db.execute("UPDATE rolls SET dried_at=? WHERE id=?",
                         (when or today(), roll["id"]))
         self.db.commit()
 
     def roll_history(self, fid: int) -> list:
-        """Rollos que ha tenido el filamento, del más nuevo al más viejo, con lo
-        que se consumió en el tramo de cada uno."""
+        """Rolls this filament has had, newest first, with how much was consumed
+        during each one's stint."""
         rows = self.db.execute(
             "SELECT * FROM rolls WHERE filament_id=? ORDER BY opened_at DESC, id DESC", (fid,)
         ).fetchall()
         out = []
         for i, r in enumerate(rows):
-            # el tramo de un rollo acaba donde empieza el siguiente
+            # a roll's stint ends where the next one begins
             nxt = rows[i - 1]["opened_at"] if i > 0 else None
             if nxt:
                 used = self.db.execute(
@@ -750,7 +780,7 @@ class Store:
         return out
 
     def filament_prints(self, fid: int) -> list:
-        """Impresiones en las que aparece este filamento, con sus gramos."""
+        """Prints this filament appears in, with their grams."""
         rows = self.db.execute(
             "SELECT p.id, p.date, p.project, p.failed, p.url, pi.grams "
             "FROM print_items pi JOIN prints p ON p.id = pi.print_id "
@@ -764,13 +794,13 @@ class Store:
             for r in rows
         ]
 
-    # ---------- copias de seguridad ----------
+    # ---------- backups ----------
 
     def backup(self, keep: int = 10) -> str:
-        """Una copia por día en data/backups/, conservando las últimas `keep`.
+        """One copy per day in data/backups/, keeping the last `keep`.
 
-        Usa la API de backup de SQLite en vez de copiar el archivo: así la copia
-        es consistente aunque haya una escritura a medias.
+        Uses SQLite's backup API rather than copying the file, so the copy is
+        consistent even mid-write.
         """
         bdir = os.path.join(os.path.dirname(self.path), "backups")
         os.makedirs(bdir, exist_ok=True)
@@ -800,12 +830,12 @@ class Store:
             "last": os.path.basename(files[-1])[10:-3] if files else "",
         }
 
-    # ---------- tara del carrete ----------
+    # ---------- spool tare ----------
 
     def spool_tare(self) -> dict:
-        """Taras por marca y tipo de bobina; lo medido por el usuario manda.
+        """Tares by brand and spool type; whatever the user measured wins.
 
-        Acepta el formato antiguo ({marca: gramos}), que se interpreta como plástico.
+        Accepts the old format ({brand: grams}), read as plastic.
         """
         raw = self.get_settings().get("spool_tare")
         out = {k: dict(v) for k, v in SPOOL_TARE.items()}
@@ -864,7 +894,7 @@ class Store:
         return guess_tare(brand, kind)
 
     def brands(self) -> list:
-        """Marcas conocidas más las que ya has usado, sin repetir."""
+        """Known brands plus the ones already in use, without duplicates."""
         used = [r["brand"] for r in self.db.execute(
             "SELECT DISTINCT brand FROM rolls WHERE brand <> '' "
             "UNION SELECT DISTINCT brand FROM spares WHERE brand <> ''")]
@@ -875,7 +905,7 @@ class Store:
                 out.append(b)
         return sorted(out, key=str.lower)
 
-    # ---------- impresiones ----------
+    # ---------- prints ----------
 
     def prints(self, limit: int = None, search: str = "", filament_id: int = None,
                date_from: str = "", date_to: str = "") -> list:
@@ -943,13 +973,13 @@ class Store:
         pdate = data.get("date") or today()
         project = (data.get("project") or "").strip()
         if not project:
-            raise ValueError("Indica el nombre del proyecto.")
+            raise ValueError("Enter the project name.")
         items = [
             i for i in (data.get("items") or [])
             if i.get("filament_id") and float(i.get("grams") or 0) > 0
         ]
         if not items:
-            raise ValueError("Añade al menos un filamento con gramos.")
+            raise ValueError("Add at least one filament with grams.")
         notes = (data.get("notes") or "").strip()
         failed = 1 if data.get("failed") else 0
         url = clean_url(data.get("url"))
@@ -985,7 +1015,7 @@ class Store:
         ).fetchall()
         return [r["project"] for r in rows]
 
-    # ---------- estadísticas ----------
+    # ---------- statistics ----------
 
     def stats(self) -> dict:
         db = self.db

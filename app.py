@@ -1,6 +1,6 @@
-"""Filament Tracker - inventario y historial de impresión 3D.
+"""Filament Tracker - 3D printing filament inventory and print history.
 
-Ventana de escritorio (pywebview) con interfaz HTML y base de datos SQLite local.
+A desktop window (pywebview) with an HTML interface and a local SQLite database.
 """
 
 import os
@@ -10,12 +10,12 @@ import traceback
 import webview
 
 from core import (APP_DIR, DB_PATH, DRY_DAYS, SPOOL_TYPES, Store,
-                  clean_url, guess_hex)
+                  clean_url, detect_lang, guess_hex)
 from importer import import_excel
 
 WEB_DIR = os.path.join(APP_DIR, "web")
 
-# pywebview 6 sustituyó las constantes OPEN_DIALOG/SAVE_DIALOG por el enum FileDialog
+# pywebview 6 replaced the OPEN_DIALOG/SAVE_DIALOG constants with a FileDialog enum
 _FD = getattr(webview, "FileDialog", None)
 DLG_OPEN = _FD.OPEN if _FD else webview.OPEN_DIALOG
 DLG_SAVE = _FD.SAVE if _FD else webview.SAVE_DIALOG
@@ -36,7 +36,7 @@ class Api:
         self._store = Store(DB_PATH)
         self._window = None
 
-    # ---------- arranque ----------
+    # ---------- startup ----------
 
     def bootstrap(self):
         try:
@@ -92,7 +92,7 @@ class Api:
             traceback.print_exc()
             return err(e)
 
-    # ---------- filamentos ----------
+    # ---------- filaments ----------
 
     def save_filament(self, data):
         try:
@@ -182,12 +182,12 @@ class Api:
             return err(e)
 
     def filament_detail(self, fid):
-        """Todo lo de un filamento para su ficha: rollos e impresiones."""
+        """Everything about a filament for its detail sheet: rolls and prints."""
         try:
             fid = int(fid)
             fil = next((f for f in self._store.filaments() if f["id"] == fid), None)
             if fil is None:
-                return err("Filamento no encontrado.")
+                return err("Filament not found.")
             return ok({
                 "filament": fil,
                 "rolls": self._store.roll_history(fid),
@@ -221,7 +221,7 @@ class Api:
     def guess_color(self, name):
         return ok(guess_hex(name or ""))
 
-    # ---------- impresiones ----------
+    # ---------- prints ----------
 
     def save_print(self, data):
         try:
@@ -236,7 +236,7 @@ class Api:
         except Exception as e:
             return err(e)
 
-    # ---------- ajustes / archivos ----------
+    # ---------- settings / files ----------
 
     def save_settings(self, data):
         try:
@@ -250,7 +250,7 @@ class Api:
             paths = self._window.create_file_dialog(
                 DLG_OPEN,
                 allow_multiple=False,
-                file_types=("Excel (*.xlsx;*.xlsm)", "Todos los archivos (*.*)"),
+                file_types=("Excel (*.xlsx;*.xlsm)", "All files (*.*)"),
             )
             return ok(paths[0] if paths else None)
         except Exception as e:
@@ -260,7 +260,7 @@ class Api:
         try:
             path = data.get("path")
             if not path or not os.path.exists(path):
-                return err("No se ha encontrado el archivo.")
+                return err("File not found.")
             res = import_excel(self._store, path, replace=bool(data.get("replace")))
             return ok(res)
         except Exception as e:
@@ -273,7 +273,7 @@ class Api:
 
             path = self._window.create_file_dialog(
                 DLG_SAVE,
-                save_filename="Filamentos.xlsx",
+                save_filename="Filaments.xlsx",
                 file_types=("Excel (*.xlsx)",),
             )
             if not path:
@@ -283,28 +283,28 @@ class Api:
 
             wb = openpyxl.Workbook()
             ws = wb.active
-            ws.title = "Inventario"
+            ws.title = "Inventory"
             ws.append(
-                ["Filamento", "Material", "Color", "Marca", "Rollo (g)", "Usado (g)",
-                 "Restante (g)", "%", "Stock", "Rollo abierto", "Último secado"]
+                ["Filament", "Material", "Colour", "Brand", "Spool (g)", "Used (g)",
+                 "Left (g)", "%", "Spares", "Opened", "Last dried"]
             )
             for f in self._store.filaments():
                 ws.append([f["name"], f["material"], f["color"], f["roll_brand"],
                            f["roll_weight"], f["used"], f["remaining"], f["pct"],
                            f["stock"], f["roll_opened"], f["dried_at"]])
 
-            ws3 = wb.create_sheet("Repuestos")
-            ws3.append(["Filamento", "Material", "Color", "Marca", "Peso (g)"])
+            ws3 = wb.create_sheet("Spares")
+            ws3.append(["Filament", "Material", "Colour", "Brand", "Weight (g)"])
             for f in self._store.filaments():
                 for sp in f["spares"]:
                     ws3.append([f["name"], f["material"], f["color"], sp["brand"], sp["weight"]])
 
-            ws2 = wb.create_sheet("Historial")
-            ws2.append(["Fecha", "Proyecto", "Filamento", "Gramos", "Fallida", "Enlace", "Notas"])
+            ws2 = wb.create_sheet("History")
+            ws2.append(["Date", "Project", "Filament", "Grams", "Failed", "Link", "Notes"])
             for p in self._store.prints():
                 for it in p["items"]:
                     ws2.append([p["date"], p["project"], it["name"], it["grams"],
-                                "sí" if p["failed"] else "", p["url"], p["notes"]])
+                                "yes" if p["failed"] else "", p["url"], p["notes"]])
 
             for sheet in (ws, ws2, ws3):
                 for col in sheet.columns:
@@ -324,7 +324,7 @@ class Api:
 
             safe = clean_url(url)
             if not safe:
-                return err("Ese enlace no es válido.")
+                return err("That link is not valid.")
             webbrowser.open(safe)
             return ok()
         except Exception as e:
@@ -341,7 +341,72 @@ class Api:
             return err(e)
 
 
+WEBVIEW2_URL = "https://developer.microsoft.com/microsoft-edge/webview2/"
+
+# Shown only when the WebView2 runtime is missing, so it cannot go through the
+# normal translation files — those live inside the window that will not open.
+MISSING_RUNTIME = {
+    "en": ("Filament Tracker needs the Microsoft WebView2 runtime, which is not "
+           "installed on this PC.\n\nIt ships with Windows 11 and is a free "
+           "download for Windows 10.\n\nOpen the download page now?"),
+    "es": ("Filament Tracker necesita el runtime WebView2 de Microsoft, que no está "
+           "instalado en este equipo.\n\nViene de serie en Windows 11 y es una "
+           "descarga gratuita para Windows 10.\n\n¿Abrir la página de descarga?"),
+    "fr": ("Filament Tracker a besoin du runtime WebView2 de Microsoft, absent de ce "
+           "PC.\n\nIl est inclus dans Windows 11 et téléchargeable gratuitement pour "
+           "Windows 10.\n\nOuvrir la page de téléchargement ?"),
+    "de": ("Filament Tracker benötigt die Microsoft-WebView2-Laufzeit, die auf diesem "
+           "PC fehlt.\n\nSie ist in Windows 11 enthalten und für Windows 10 kostenlos "
+           "erhältlich.\n\nDownloadseite jetzt öffnen?"),
+    "pt": ("O Filament Tracker precisa do runtime WebView2 da Microsoft, que não está "
+           "instalado neste PC.\n\nVem com o Windows 11 e é uma transferência gratuita "
+           "para o Windows 10.\n\nAbrir a página de transferência?"),
+    "it": ("Filament Tracker richiede il runtime WebView2 di Microsoft, che non è "
+           "installato su questo PC.\n\nÈ incluso in Windows 11 ed è scaricabile "
+           "gratuitamente per Windows 10.\n\nAprire la pagina di download?"),
+}
+
+
+def has_webview2() -> bool:
+    """Is the WebView2 runtime installed?
+
+    pywebview renders through it, so without it the window never opens and the
+    user just sees a stack trace. Windows 11 ships with it; Windows 10 may not.
+    """
+    if sys.platform != "win32":
+        return True
+    import winreg
+
+    guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+    for hive, path in (
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients"),
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\EdgeUpdate\Clients"),
+        (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\EdgeUpdate\Clients"),
+    ):
+        try:
+            with winreg.OpenKey(hive, path + "\\" + guid) as key:
+                if winreg.QueryValueEx(key, "pv")[0] not in ("", "0.0.0.0"):
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def warn_missing_runtime():
+    """Explain the missing runtime in a plain dialog and offer the download."""
+    import ctypes
+    import webbrowser
+
+    text = MISSING_RUNTIME.get(detect_lang(), MISSING_RUNTIME["en"])
+    MB_YESNO_ICONWARNING = 0x34
+    if ctypes.windll.user32.MessageBoxW(0, text, "Filament Tracker", MB_YESNO_ICONWARNING) == 6:
+        webbrowser.open(WEBVIEW2_URL)
+
+
 def main():
+    if not has_webview2():
+        warn_missing_runtime()
+        return
     api = Api()
     window = webview.create_window(
         "Filament Tracker",
@@ -358,7 +423,7 @@ def main():
     try:
         webview.start(debug=debug, icon=icon if os.path.exists(icon) else None)
     except TypeError:
-        # backends antiguos de pywebview no aceptan icon=
+        # older pywebview backends do not accept icon=
         webview.start(debug=debug)
 
 

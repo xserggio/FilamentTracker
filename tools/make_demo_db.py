@@ -1,8 +1,8 @@
-"""Genera una base de datos de ejemplo para las capturas del README.
+"""Builds a sample database for the README screenshots.
 
     py tools/make_demo_db.py data/filaments.db
 
-No toca ningún dato real: escribe en la ruta que se le indique, borrándola antes.
+Touches no real data: it writes to the given path, deleting it first.
 """
 
 import os
@@ -17,7 +17,7 @@ from core import Store  # noqa: E402
 TODAY = date.today()
 D = lambda n: (TODAY - timedelta(days=n)).isoformat()  # noqa: E731
 
-# material, color, hex, marca, tipo de bobina, repuestos, días abierto
+# material, colour, hex, brand, spool type, spares, days since opened
 FILAMENTS = [
     ("PLA",     "black",            "#1c1c1e", "Bambu Lab", "plastic",   2, 34),
     ("PLA",     "white",            "#f4f4f2", "Bambu Lab", "plastic",   1, 21),
@@ -34,7 +34,7 @@ FILAMENTS = [
     ("ABS",     "natural",          "#e3ddd0", "Elegoo",    "cardboard", 0, 30),
 ]
 
-# proyecto, url, fallida
+# project, url, failed
 PROJECTS = [
     ("Gridfinity 5x5 bins",      "https://gridfinity.xyz", 0),
     ("Gridfinity baseplate",     "", 0),
@@ -68,7 +68,7 @@ def main(path):
         os.remove(path)
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     s = Store(path)
-    rnd = random.Random(20260807)   # semilla fija: capturas reproducibles
+    rnd = random.Random(20260807)   # fixed seed: reproducible screenshots
 
     ids = []
     for material, color, hexv, brand, stype, spares, days in FILAMENTS:
@@ -79,11 +79,11 @@ def main(path):
         })
         ids.append(fid)
 
-    # el PETG lleva secándose desde hace tiempo; el PLA gris se secó hace poco
+    # the PETG is overdue for drying; the grey PLA was dried recently
     s.mark_dried(ids[2], D(5))
 
-    # Los colores de diario (negro y blanco) se gastan mucho más que un PETG
-    # transparente: la muestra tiene que enseñar rollos en apuros, no todos al 95 %.
+    # Everyday colours (black and white) burn through far faster than a clear
+    # PETG: the sample has to show spools in trouble, not all of them at 95%.
     weights = [15, 12, 10, 6, 6, 3, 4, 4, 3, 5, 2, 2, 2]
 
     for i, (project, url, failed) in enumerate(PROJECTS * 3):
@@ -99,7 +99,7 @@ def main(path):
         items = []
         for j, fid in enumerate(chosen):
             grams = rnd.choice([2.4, 9.5, 27, 63, 88, 120, 155, 190, 240])
-            if j > 0:                      # los colores secundarios son detalles
+            if j > 0:                      # secondary colours are just accents
                 grams = round(grams * rnd.uniform(0.04, 0.22), 2)
             items.append({"filament_id": fid, "grams": round(grams, 2)})
         s.save_print({

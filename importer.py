@@ -1,4 +1,4 @@
-"""Importa el Excel '3D Filament.xlsx' (export de Google Sheets) a la base de datos."""
+"""Imports a '3D Filament.xlsx' spreadsheet (Google Sheets export) into the database."""
 
 from datetime import datetime
 
@@ -57,7 +57,7 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
         db.execute("DELETE FROM filaments")
         db.commit()
 
-    # --- 1. Inventario -> filamentos -----------------------------------
+    # --- 1. Inventory sheet -> filaments --------------------------------
     known = {
         r["name"]: r["id"] for r in db.execute("SELECT id, name FROM filaments")
     }
@@ -83,10 +83,10 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
             new_filaments += 1
     db.commit()
 
-    # --- 2. Impresiones ------------------------------------------------
-    # Hoja 'Historial de Impresiones': una fila por (proyecto, filamento).
-    # Hoja 'Respuestas de formulario 2': hasta 4 filamentos por fila.
-    raw = []  # (fecha, proyecto, nombre_filamento, gramos)
+    # --- 2. Prints ------------------------------------------------------
+    # 'Historial de Impresiones' sheet: one row per (project, filament).
+    # 'Respuestas de formulario 2' sheet: up to 4 filaments per row.
+    raw = []  # (date, project, filament name, grams)
 
     if "Historial de Impresiones" in wb.sheetnames:
         ws = wb["Historial de Impresiones"]
@@ -96,11 +96,11 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
             g = _num(ws.cell(row, 4).value)
             proj = _s(ws.cell(row, 5).value)
             if d and fil and g > 0:
-                raw.append((d, proj or "(sin nombre)", fil, g))
+                raw.append((d, proj or "(untitled)", fil, g))
 
     if "Respuestas de formulario 2" in wb.sheetnames:
         ws = wb["Respuestas de formulario 2"]
-        # columnas de pares (filamento, gramos): C/D, G/H, J/K, M/N
+        # (filament, grams) column pairs: C/D, G/H, J/K, M/N
         pairs = [(3, 4), (7, 8), (10, 11), (13, 14)]
         for row in range(2, ws.max_row + 1):
             d = _date(ws.cell(row, 2).value)
@@ -111,9 +111,9 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
                 fil = _s(ws.cell(row, cf).value)
                 g = _num(ws.cell(row, cg).value)
                 if fil and g > 0:
-                    raw.append((d, proj or "(sin nombre)", fil, g))
+                    raw.append((d, proj or "(untitled)", fil, g))
 
-    # Filamentos que aparecen en el historial pero no en el inventario
+    # Filaments that show up in the history but not in the inventory
     for _, _, fil, _ in raw:
         if fil not in known:
             mat, col = _split_name(fil)
@@ -126,7 +126,7 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
             new_filaments += 1
     db.commit()
 
-    # Agrupa por (fecha, proyecto): una impresión puede llevar varios colores.
+    # Group by (date, project): one print can involve several colours.
     grouped = {}
     order = []
     for d, proj, fil, g in raw:
@@ -158,10 +158,10 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
         new_prints += 1
     db.commit()
 
-    # --- 3. Rollo activo para cada filamento ---------------------------
-    # El Excel contaba el consumo desde la apertura del rollo (hoja 'Rollos',
-    # que no viene en el export). Usamos la primera fecha del historial para
-    # que los gramos restantes coincidan con los que tenías.
+    # --- 3. Fitted roll for each filament -------------------------------
+    # The spreadsheet counted usage from the roll's opening date (a 'Rollos'
+    # sheet that Google does not export). We use the first date in the history
+    # so the remaining grams match what the spreadsheet showed.
     first = db.execute("SELECT MIN(date) d FROM prints").fetchone()["d"] or today()
     default_g = float(store.get_settings().get("default_spool_g", 1000))
     new_rolls = 0
@@ -170,7 +170,7 @@ def import_excel(store: Store, path: str, replace: bool = False) -> dict:
             continue
         db.execute(
             "INSERT INTO rolls(filament_id, opened_at, weight, adjust, note) "
-            "VALUES(?,?,?,0,'importado del Excel')",
+            "VALUES(?,?,?,0,'imported from spreadsheet')",
             (fid, first, default_g),
         )
         new_rolls += 1

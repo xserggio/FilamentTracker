@@ -20,7 +20,7 @@
 }
 
 *{box-sizing:border-box}
-/* las reglas de clase (.overlay, .view…) ganarían al [hidden] del navegador */
+/* class rules (.overlay, .view…) would beat the browser's [hidden] */
 [hidden]{display:none !important}
 html,body{height:100%}
 body{
@@ -46,13 +46,13 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
   display:flex;flex-direction:column;padding:18px 14px;gap:22px;
 }
 .brand{display:flex;align-items:center;gap:10px;padding:6px 4px 0}
-/* el Benchy va suelto, sin contenedor: la caja sigue su proporción real */
+/* the Benchy stands alone, no container: the box follows its real aspect ratio */
 .brand-mark{width:45px;height:36.7px;flex:none;color:#fff}
 .brand-mark svg{stroke:none}
 
-/* Wordmark en una línea: el contraste de grosor hace el trabajo que antes
-   hacía la segunda línea en versalitas. Segoe UI Variable Display está pensada
-   para cuerpos grandes, con interletraje más ceñido que la de texto. */
+/* One-line wordmark: the weight contrast does the job the second line in small
+   caps used to. Segoe UI Variable Display is meant for large sizes, with tighter
+   tracking than the text cut. */
 .brand-text{
   font-family:"Segoe UI Variable Display","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
   font-size:16.5px;line-height:1;display:flex;align-items:baseline;gap:4.5px;
@@ -87,7 +87,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
 .content{flex:1;overflow-y:auto;padding:22px 26px 40px}
 .view{display:flex;flex-direction:column;gap:18px}
 
-/* ============ botones ============ */
+/* ============ buttons ============ */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
   padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--line);
@@ -115,7 +115,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
 .icon-btn svg{width:16px;height:16px}
 .spacer{flex:1}
 
-/* ============ tarjetas ============ */
+/* ============ cards ============ */
 .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:18px}
 .card.no-pad{padding:0;overflow:hidden}
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -140,7 +140,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
   font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.75px;
   font-weight:650;padding-top:6px;
 }
-/* el estado se comunica con el icono en vez de con una barra lateral */
+/* state is conveyed by the icon rather than a side bar */
 .kpi-ic{width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center}
 .kpi-ic svg{width:15px;height:15px;stroke-width:1.85}
 .kpi.t-neutral .kpi-ic{background:rgba(111,125,247,.13);color:#96a2ff}
@@ -156,7 +156,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
 .kpi.clickable:hover .go{opacity:1;transform:none}
 .kpi.clickable:active{transform:none}
 
-/* ============ barra de herramientas ============ */
+/* ============ toolbar ============ */
 .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .search{position:relative;flex:1;min-width:210px}
 .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted-2)}
@@ -184,7 +184,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
 .toggle input:checked{background:var(--accent)}
 .toggle input:checked::after{transform:translateX(15px);background:#fff}
 
-/* ============ tarjetas de filamento ============ */
+/* ============ filament cards ============ */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
 .fcard{
   background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
@@ -207,7 +207,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
   font-size:10.5px;font-weight:650;letter-spacing:.4px;text-transform:uppercase;
   padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);
 }
-/* la marca del rollo: presente pero sin competir con el estado del material */
+/* the roll's brand: present without competing with the material state */
 .tag.brand{background:transparent;border-color:#303748;color:var(--muted-2);text-transform:none;letter-spacing:.2px}
 .tag.stock{background:rgba(52,201,138,.11);border-color:rgba(52,201,138,.3);color:#5fd6a5}
 .tag.nostock{background:rgba(240,180,66,.1);border-color:rgba(240,180,66,.3);color:#e9b757}
@@ -227,7 +227,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
   border-radius:5px;font-size:14px;line-height:1;
 }
 .stepper button:hover{background:#2c3341;color:var(--text)}
-/* el número abre el detalle de repuestos, así que se comporta como botón */
+/* the number opens the spares detail, so it behaves as a button */
 .stepper .count{
   min-width:26px;text-align:center;font-size:12px;font-weight:600;border:0;
   background:transparent;color:var(--text);cursor:pointer;padding:2px 0;border-radius:5px;
@@ -235,7 +235,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
 .stepper .count:hover{background:#2c3341}
 .stepper .count.mixed{color:#e9b757}
 
-/* filas del diálogo de repuestos */
+/* rows in the spares dialog */
 .spares{display:flex;flex-direction:column;gap:8px}
 .spare-row{display:grid;grid-template-columns:1fr 104px 32px;gap:8px;align-items:center}
 .spare-row input{
@@ -245,7 +245,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.65);cursor:po
 .spare-row input:focus{border-color:var(--accent)}
 .spares-empty{color:var(--muted-2);font-size:12.5px;padding:6px 2px}
 
-/* ============ tabla ============ */
+/* ============ table ============ */
 .table{width:100%;border-collapse:collapse}
 .table th{
   text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted-2);
@@ -270,7 +270,7 @@ tr:hover .row-actions{opacity:1}
 .fchip b{font-weight:600;font-variant-numeric:tabular-nums}
 .fchip span{color:var(--muted)}
 
-/* ============ avisos ============ */
+/* ============ alerts ============ */
 .alerts{display:flex;flex-direction:column;gap:8px;max-height:270px;overflow-y:auto}
 .alert{
   display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
@@ -283,7 +283,7 @@ tr:hover .row-actions{opacity:1}
 .alert .txt small{color:var(--muted-2);font-size:11.5px}
 .alert .val{font-size:12.5px;font-weight:640;font-variant-numeric:tabular-nums}
 
-/* ============ gráficas ============ */
+/* ============ charts ============ */
 .bars{display:flex;flex-direction:column;gap:11px}
 .brow{display:grid;grid-template-columns:132px 1fr 68px;align-items:center;gap:11px}
 .brow .bl{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -304,11 +304,11 @@ tr:hover .row-actions{opacity:1}
 .col .cl{font-size:11.5px;color:var(--muted-2);white-space:nowrap}
 .col .cv{font-size:11.5px;font-weight:640;color:var(--muted)}
 
-/* ============ estado vacío ============ */
+/* ============ empty state ============ */
 .empty{padding:44px 20px;text-align:center;color:var(--muted-2);font-size:13.5px}
 .empty b{display:block;color:var(--muted);font-size:14.5px;margin-bottom:5px;font-weight:560}
 
-/* ============ formularios ============ */
+/* ============ forms ============ */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 @media(max-width:620px){.form-grid{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:6px}
@@ -341,7 +341,7 @@ tr:hover .row-actions{opacity:1}
   max-width:520px;word-break:break-all}
 .muted{color:var(--muted)}
 
-/* filas de filamento dentro del modal de impresión */
+/* filament rows inside the print modal */
 .items{display:flex;flex-direction:column;gap:8px;margin-bottom:9px}
 .item-row{display:grid;grid-template-columns:1fr 108px 32px;gap:8px;align-items:center}
 .item-row select,.item-row input{
@@ -355,7 +355,7 @@ tr:hover .row-actions{opacity:1}
 }
 .total-line b{color:var(--text);font-size:16px;font-weight:660;margin-left:6px}
 
-/* ============ modales ============ */
+/* ============ modals ============ */
 .overlay{
   position:fixed;inset:0;background:rgba(6,8,12,.72);backdrop-filter:blur(3px);
   display:grid;place-items:center;z-index:60;padding:24px;animation:fade .14s ease;
@@ -397,18 +397,18 @@ tr:hover .row-actions{opacity:1}
 .toast.error .dot{background:var(--danger)}
 .toast.info .dot{background:var(--accent)}
 
-/* el diálogo de rollo apila varios campos sueltos: necesita su propio ritmo */
+/* the roll dialog stacks several loose fields: it needs its own rhythm */
 #rNew{display:flex;flex-direction:column;gap:13px}
 #rNew .field.mt{margin-top:0}
 
-/* ============ impresiones fallidas y secado ============ */
+/* ============ failed prints and drying ============ */
 .tag.failed{
   margin-left:8px;background:rgba(242,97,92,.12);border-color:rgba(242,97,92,.32);
   color:#f4837e;text-transform:none;letter-spacing:.2px;font-weight:600;
 }
 .toggle .hint{font-style:normal;color:var(--muted-2);font-weight:400}
 
-/* indicador de humedad: azul cuando está al día, ámbar cuando toca secar */
+/* moisture badge: blue when up to date, amber when drying is due */
 .dry{
   display:inline-flex;align-items:center;gap:4px;flex:none;
   font-size:10.5px;font-weight:650;letter-spacing:.3px;
@@ -420,7 +420,7 @@ tr:hover .row-actions{opacity:1}
 #dryGrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 
 /* ============ marcar fallida desde el historial ============ */
-/* el botón «!» queda siempre visible cuando ya está marcada, para que la fila
+/* the "!" button stays visible once a print is flagged, so the row reads as
    no dependa del hover para contar su estado */
 .fail-btn{color:var(--muted)}
 .fail-btn:hover{background:rgba(240,180,66,.14);color:var(--warn)}
@@ -450,7 +450,7 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .dry-more .form-grid{margin-top:13px}
 #dryGridUsed,#dryGridOther{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 
-/* filas de gramos del diálogo de resultado */
+/* gram rows in the outcome dialog */
 .fail-row{display:grid;grid-template-columns:1fr 108px;gap:8px;align-items:center}
 .fail-name{
   display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);
@@ -464,7 +464,7 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .fail-row input:focus{border-color:var(--accent)}
 #failItems{margin-bottom:8px}
 
-/* ============ ficha del filamento ============ */
+/* ============ filament detail sheet ============ */
 .modal.wide{width:min(720px,100%)}
 .det-head{display:flex;gap:16px;align-items:flex-start}
 .swatch.big{width:56px;height:56px;border-radius:16px}
@@ -500,13 +500,13 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .fcard-title[role=button]:hover b{color:#b9c1ff}
 #tareGrid,#dryGridUsed,#dryGridOther{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 
-/* accesos directos de la tarjeta: pesar y secar, junto a «Rollo nuevo» */
+/* card shortcuts: weigh and dry, next to "New spool" */
 .icon-btn.sm{width:26px;height:26px;border-radius:7px;flex:none}
 .icon-btn.sm svg{width:14px;height:14px}
 .fcard-foot .icon-btn.sm{background:var(--surface-2);border:1px solid var(--line)}
 .fcard-foot .icon-btn.sm:hover{background:#2c3341;border-color:#3a4356;color:var(--text)}
 
-/* marca como desplegable + tipo de bobina */
+/* brand as a dropdown + spool type */
 .brand-sel{
   padding:9px 11px;border-radius:var(--r-sm);border:1px solid var(--line);
   background:var(--bg-2);outline:none;width:100%;cursor:pointer;

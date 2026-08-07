@@ -47,25 +47,41 @@ needs drying more often than PLA.
 
 ## Download
 
-Grab `Filament Tracker.exe` from the
-[latest release](../../releases/latest). It is a single file — no installer, no
-Python needed. Windows 10/11 only (it uses the WebView2 runtime that ships with
-Windows 11).
+**1.** Download **`Filament Tracker.exe`** from the
+[latest release](../../releases/latest).
 
-> Keep the `data` folder that appears next to the executable: that is your database.
-> If you move the app somewhere else, move that folder with it.
+**2.** Put it wherever you like — Desktop, Documents, a USB stick.
 
-### Running from source
+**3.** Double-click it. That's it.
 
-```bash
-git clone https://github.com/xserggio/FilamentTracker.git
-cd FilamentTracker
-py -m pip install -r requirements.txt
-py app.py
-```
+No installer, no Python, no command line. It is one file; the first time you run it
+a `data` folder appears next to it with your database inside.
 
-Requires Python 3.10+ and the two dependencies in `requirements.txt`
-(`pywebview` and `openpyxl`).
+<details>
+<summary><b>Windows says "Windows protected your PC"</b></summary>
+
+That is SmartScreen, and it says that about every program that has not paid for a
+code-signing certificate. Click **More info** and then **Run anyway**.
+
+If you would rather not take my word for it, the source is all here and you can
+[build the executable yourself](#building-the-executable).
+</details>
+
+<details>
+<summary><b>Nothing happens, or it mentions WebView2</b></summary>
+
+The app draws its interface with Microsoft's WebView2 runtime. Windows 11 ships with
+it; some Windows 10 installs do not. If it is missing, the app says so and offers to
+open the [download page](https://developer.microsoft.com/microsoft-edge/webview2/) —
+install it, then run the app again.
+</details>
+
+<details>
+<summary><b>Moving the app to another folder or PC</b></summary>
+
+Take the `data` folder with it. That folder is your database; leave it behind and
+the app starts empty.
+</details>
 
 ---
 
@@ -211,7 +227,21 @@ anywhere. To back it up, copy that file. To inspect it, any SQLite browser will 
 
 ---
 
-## Building the executable
+## For developers
+
+### Running from source
+
+```bash
+git clone https://github.com/xserggio/FilamentTracker.git
+cd FilamentTracker
+py -m pip install -r requirements.txt
+py app.py
+```
+
+Python 3.10+ and the two dependencies in `requirements.txt` (`pywebview` and
+`openpyxl`).
+
+### Building the executable
 
 ```bash
 py -m pip install pyinstaller

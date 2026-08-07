@@ -1,10 +1,10 @@
-/* Filament Tracker — interfaz */
+/* Filament Tracker — interface */
 
 const S = {
   filaments: [], prints: [], projects: [], stats: {}, settings: {}, dbPath: '',
   dryDays: {}, materials: [], spoolTare: {}, backups: {},
   brands: [], spoolTypes: ['plastic', 'cardboard', 'metal', 'other'],
-  lang: 'es', view: 'dashboard',
+  lang: 'en', view: 'dashboard',
   inv: { search: '', material: '', sort: 'name', lowOnly: false, stockOnly: false, archived: false },
   his: { search: '', filament: '', from: '', to: '', failedOnly: false },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
@@ -14,13 +14,13 @@ const S = {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
-/* ---------- traducción ----------
-   t('inv.spare', {n: 2}) resuelve las sustituciones {llave} y elige la forma
-   plural de las cadenas escritas como "singular|plural" según n. */
+/* ---------- translation ----------
+   t('inv.spare', {n: 2}) resolves {key} substitutions and picks the plural form
+   of strings written as "singular|plural" based on n. */
 function t(key, vars) {
-  const dict = I18N[S.lang] || I18N.es;
+  const dict = I18N[S.lang] || I18N.en;
   let s = dict[key];
-  if (s === undefined) s = (I18N.es[key] !== undefined ? I18N.es[key] : key);
+  if (s === undefined) s = (I18N.en[key] !== undefined ? I18N.en[key] : key);
   if (s.includes('|')) {
     const forms = s.split('|');
     s = (vars && Number(vars.n) === 1) ? forms[0] : forms[1];
@@ -31,7 +31,7 @@ function t(key, vars) {
   return s;
 }
 
-const locale = () => (LANGS[S.lang] || LANGS.es).locale;
+const locale = () => (LANGS[S.lang] || LANGS.en).locale;
 
 function applyI18n() {
   document.documentElement.lang = S.lang;
@@ -40,7 +40,7 @@ function applyI18n() {
   $$('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
 }
 
-/* ---------- utilidades ---------- */
+/* ---------- helpers ---------- */
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -81,9 +81,9 @@ function toast(msg, kind = 'ok') {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 220); }, 2800);
 }
 
-/* ---------- puente con Python ----------
-   Las acciones que solo confirman (guardar, borrar…) devuelven data = null, así que
-   el fallo necesita un valor propio: si no, un guardado correcto parecería un error. */
+/* ---------- bridge to Python ----------
+   Actions that merely confirm (save, delete…) return data = null, so failure needs
+   a value of its own — otherwise a successful save would look like an error. */
 const FAIL = Symbol('call-failed');
 const failed = (r) => r === FAIL;
 
@@ -120,7 +120,7 @@ async function reload() {
   renderAll();
 }
 
-/* ---------- navegación ---------- */
+/* ---------- navigation ---------- */
 const VIEWS = ['dashboard', 'inventory', 'history', 'stats', 'settings'];
 
 function setView(v) {
@@ -141,7 +141,7 @@ function setView(v) {
   renderAll();
 }
 
-/* ---------- render principal ---------- */
+/* ---------- main render ---------- */
 function renderAll() {
   const low = S.filaments.filter((f) => !f.archived && (f.low || f.empty)).length;
   const badge = $('#navLow');
@@ -169,16 +169,16 @@ function fillSelects() {
   hf.value = S.his.filament;
 
   $('#projectList').innerHTML = S.projects.map((p) => `<option value="${esc(p)}">`).join('');
-  // el desplegable de material ofrece todo lo que la app sabe secar, no solo lo usado
+  // the material list offers everything the app knows how to dry, not just what is in use
   const allMats = [...new Set([...S.materials, ...mats])].sort();
   $('#materialList').innerHTML = allMats.map((m) => `<option value="${esc(m)}">`).join('');
 }
 
 
-/* ---------- desplegables de marca y tipo de bobina ----------
-   La marca deja de ser texto libre para que enlace con la tabla de taras: al
-   elegirla (y con el tipo de bobina) la app ya sabe cuánto pesa el carrete vacío.
-   «Otra marca…» abre un campo de texto para no dejar fuera lo que no esté. */
+/* ---------- brand and spool-type dropdowns ----------
+   Brand stopped being free text so it can hook into the tare table: picking it
+   (together with the spool type) tells the app how much the empty spool weighs.
+   "Other brand…" opens a text field so nothing is locked out. */
 const OTHER = '__other__';
 
 function brandOptions(current) {
@@ -196,7 +196,7 @@ function typeOptions(current) {
     `<option value="${k}"${k === cur ? ' selected' : ''}>${esc(t('type.' + k))}</option>`).join('');
 }
 
-/* Conecta un <select> de marca con su <input> de texto y avisa de los cambios. */
+/* Wires a brand <select> to its companion text <input> and reports changes. */
 function wireBrand(selId, otherId, onChange) {
   const sel = $(selId);
   const other = $(otherId);
@@ -222,7 +222,7 @@ function setBrand(selId, otherId, value) {
   other.hidden = !isOther;
 }
 
-// tara que corresponde a una marca y un tipo, con el genérico de reserva
+// tare for a given brand and type, with the generic figure as fallback
 function tareFor(brand, kind) {
   const norm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const key = Object.keys(S.spoolTare).find((k) => norm(k) === norm(brand));
@@ -264,7 +264,7 @@ function renderKpis(el, defs) {
   $$('[data-k]', el).forEach((n) => { n.onclick = defs[+n.dataset.k].action; });
 }
 
-/* ---------- saltos con filtros ya aplicados ---------- */
+/* ---------- jumps with filters already applied ---------- */
 function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name' } = {}) {
   S.inv = { search: '', material: '', sort, lowOnly, stockOnly, archived: false };
   $('#invSearch').value = ''; $('#invMaterial').value = '';
@@ -281,7 +281,7 @@ function gotoHistory({ from = '', to = '', failedOnly = false } = {}) {
   setView('history');
 }
 
-/* ---------- PANEL ---------- */
+/* ---------- DASHBOARD ---------- */
 function renderDashboard() {
   const st = S.stats;
   const active = S.filaments.filter((f) => !f.archived);
@@ -360,8 +360,8 @@ function chip(it) {
     <span>${esc(it.name)}</span><b>${g(it.grams)} g</b></span>`;
 }
 
-/* ---------- INVENTARIO ---------- */
-// El PLA aguanta meses, el PETG o el nylon no: el aviso sale del límite del material.
+/* ---------- INVENTORY ---------- */
+// PLA lasts months, PETG and nylon do not: the warning comes from the material limit.
 function dryBadge(f) {
   if (f.days_since_dry == null) return '';
   const vars = { d: fdate(f.dried_at), n: f.days_since_dry, limit: f.dry_limit, mat: f.material };
@@ -375,8 +375,8 @@ function dryBadge(f) {
 
 const spareBrands = (f) => [...new Set((f.spares || []).map((s) => s.brand).filter(Boolean))];
 
-// La etiqueta de repuestos solo aparece cuando aporta algo, y nombra la marca
-// cuando no coincide con la del rollo puesto.
+// The spares tag only shows when it adds something, and names the brand when it
+// differs from the fitted roll's.
 function stockTag(f) {
   if (f.stock > 0) {
     const b = spareBrands(f);
@@ -478,7 +478,7 @@ function renderInventory() {
 }
 
 
-/* ---------- MODAL: ficha del filamento ---------- */
+/* ---------- MODAL: filament detail sheet ---------- */
 async function openDetail(f) {
   if (!f) return;
   S.detailTarget = f.id;
@@ -532,7 +532,7 @@ async function openDetail(f) {
       : `<div class="spares-empty">${esc(t('detail.noPrints'))}</div>`}`;
 }
 
-/* ---------- MODAL: repuestos ---------- */
+/* ---------- MODAL: spares ---------- */
 function openSpares(f) {
   S.sparesTarget = f.id;
   $('#sparesTitle').textContent = t('spares.title', { name: f.name });
@@ -579,7 +579,7 @@ function renderSpares() {
   });
 }
 
-/* ---------- HISTORIAL ---------- */
+/* ---------- HISTORY ---------- */
 function filteredPrints() {
   const q = S.his.search.toLowerCase();
   return S.prints.filter((p) => {
@@ -637,7 +637,7 @@ function renderHistory() {
   });
 }
 
-/* ---------- MODAL: resultado (marcar fallida sin reabrir el formulario) ---------- */
+/* ---------- MODAL: outcome (flag as failed without reopening the full form) ---------- */
 function openFail(p) {
   S.failTarget = p.id;
   $('#failIntro').textContent = t('fail.intro', {
@@ -646,8 +646,8 @@ function openFail(p) {
   $('#failToggle').checked = !!p.failed;
   $('#failNotes').value = p.notes || '';
 
-  // Una impresión que se corta a la mitad no gasta lo previsto: aquí se corrige
-  // lo que llegó a extruir y esos gramos sustituyen a los del registro.
+  // A print that stops halfway does not use what was planned: this corrects what
+  // actually came out, and those grams replace the recorded ones.
   $('#failItems').innerHTML = p.items.map((i) => `
     <div class="fail-row" data-fid="${i.filament_id}">
       <span class="fail-name"><i style="background:${esc(i.hex)}"></i>${esc(i.name)}</span>
@@ -686,7 +686,7 @@ async function saveFail() {
   toast(isFailed ? t('fail.saved') : t('fail.cleared'));
 }
 
-/* ---------- ESTADÍSTICAS ---------- */
+/* ---------- STATISTICS ---------- */
 function columns(data) {
   if (!data || !data.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
   const max = Math.max(...data.map((d) => d.grams), 1);
@@ -743,7 +743,7 @@ function renderStats() {
     { color: 'linear-gradient(90deg,#9d6ef5,#6f7df7)' });
 }
 
-/* ---------- AJUSTES ---------- */
+/* ---------- SETTINGS ---------- */
 function renderSettings() {
   $('#setLang').innerHTML = Object.entries(LANGS)
     .map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('');
@@ -752,7 +752,7 @@ function renderSettings() {
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
   $('#dbPath').textContent = S.dbPath || '—';
 
-  // primero los materiales que realmente usas; el resto queda plegado
+  // materials actually in use first; the rest stays collapsed
   const used = [...new Set(S.filaments.map((f) => f.material))].sort();
   const others = Object.keys(S.dryDays).filter((m) => !used.includes(m)).sort();
   const row = (m) => `<label class="field"><span>${esc(m)}</span>
@@ -761,8 +761,8 @@ function renderSettings() {
   $('#dryGridUsed').innerHTML = used.map(row).join('');
   $('#dryGridOther').innerHTML = others.map(row).join('');
 
-  // taras: las marcas que usas primero, y el resto de la tabla detrás.
-  // 'Bambu Lab' y 'bambulab' son la misma marca, así que se comparan normalizadas.
+  // tares: brands in use first, the rest of the table behind them.
+  // 'Bambu Lab' and 'bambulab' are the same brand, so they compare normalised.
   const norm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const mine = [...new Map(S.filaments.flatMap(
     (f) => [f.roll_brand, ...(f.spares || []).map((sp) => sp.brand)])
@@ -786,7 +786,7 @@ function renderSettings() {
     n: S.backups.count || 0, d: S.backups.last || '—' });
 }
 
-/* ---------- MODAL: impresión ---------- */
+/* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
   $('#printModalTitle').textContent = p ? t('print.edit') : t('print.new');
@@ -848,7 +848,7 @@ async function savePrint() {
   toast(S.editingPrint ? t('toast.printUpdated') : t('toast.printSaved'));
 }
 
-/* ---------- MODAL: filamento ---------- */
+/* ---------- MODAL: filament ---------- */
 function openFilament(f) {
   S.editingFilament = f ? f.id : null;
   $('#filModalTitle').textContent = f ? t('fil.edit') : t('fil.new');
@@ -893,9 +893,9 @@ async function saveFilament() {
   toast(S.editingFilament ? t('toast.filUpdated') : t('toast.filSaved'));
 }
 
-/* ---------- MODAL: rollo ---------- */
-// mode: 'new' | 'adjust' | 'dry'. Cada acción tiene su propio botón en la tarjeta,
-// así que el diálogo abre directamente en la que se ha pedido.
+/* ---------- MODAL: roll ---------- */
+// mode: 'new' | 'adjust' | 'dry'. Each action has its own button on the card, so
+// the dialog opens straight into whichever was asked for.
 function openRoll(f, mode = 'new') {
   S.rollTarget = f;
   $('#rollModalTitle').textContent = t('roll.title', { name: f.name });
@@ -969,7 +969,7 @@ function openRoll(f, mode = 'new') {
   $('#rMode').onchange = (e) => applyMode(e.target.value);
   $('#rMode').value = mode;
   applyMode(mode);
-  // báscula menos tara alimenta el campo de gramos restantes, que es lo que se guarda
+  // scale minus tare feeds the remaining-grams field, which is what gets saved
   const fromScale = () => {
     const total = parseFloat($('#rScale').value);
     if (!(total > 0)) return;
@@ -979,7 +979,7 @@ function openRoll(f, mode = 'new') {
   $('#rScale').oninput = fromScale;
   $('#rTare').oninput = fromScale;
 
-  // al elegir un repuesto, marca y gramaje se rellenan con los suyos (editables)
+  // picking a spare fills in its brand and weight (still editable)
   $('#rSpare').onchange = (e) => {
     const sp = (f.spares || []).find((s) => String(s.id) === e.target.value);
     if (!sp) return;
@@ -987,7 +987,7 @@ function openRoll(f, mode = 'new') {
     $('#rType').value = sp.spool_type || 'plastic';
     $('#rWeight').value = sp.weight;
   };
-  // la tara del panel de báscula sigue a la marca y al tipo elegidos
+  // the tare in the scale panel follows the chosen brand and type
   const syncTare = () => {
     $('#rTare').value = tareFor(readBrand('#rBrand', '#rBrandOther'), $('#rType').value);
   };
@@ -1025,7 +1025,7 @@ async function saveRoll() {
   await reload();
 }
 
-/* ---------- confirmación y modales ---------- */
+/* ---------- confirmation and modals ---------- */
 function confirmDialog(title, text, fn) {
   $('#cTitle').textContent = title;
   $('#cText').textContent = text;
@@ -1035,7 +1035,7 @@ function confirmDialog(title, text, fn) {
 function show(sel) { $(sel).hidden = false; }
 function hide(sel) { $(sel).hidden = true; }
 
-/* ---------- eventos ---------- */
+/* ---------- events ---------- */
 function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
@@ -1176,7 +1176,7 @@ function wire() {
   });
 }
 
-/* ---------- arranque ---------- */
+/* ---------- startup ---------- */
 async function boot() {
   wire();
   const d = await call('bootstrap');
@@ -1185,9 +1185,10 @@ async function boot() {
   applyI18n();
   setView('dashboard');
 
+  // A brand-new user has nothing to import: drop them where the work happens.
   if (d.empty) {
-    setView('settings');
-    toast(t('toast.firstImport'), 'info');
+    setView('inventory');
+    toast(t('toast.firstRun'), 'info');
   }
 }
 
