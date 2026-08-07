@@ -128,6 +128,7 @@ class Api:
                 spare_id=int(data["spare_id"]) if data.get("spare_id") else None,
                 from_stock=bool(data.get("from_stock", False)),
                 spool_type=data.get("spool_type"),
+                price=data.get("price"),
             )
             return ok()
         except Exception as e:
@@ -137,7 +138,7 @@ class Api:
         try:
             sid = self._store.add_spare(
                 int(data["id"]), brand=data.get("brand"), weight=data.get("weight"),
-                spool_type=data.get("spool_type")
+                spool_type=data.get("spool_type"), price=data.get("price")
             )
             return ok({"id": sid})
         except Exception as e:
@@ -147,7 +148,7 @@ class Api:
         try:
             self._store.update_spare(
                 int(data["spare_id"]), brand=data.get("brand"), weight=data.get("weight"),
-                spool_type=data.get("spool_type")
+                spool_type=data.get("spool_type"), price=data.get("price")
             )
             return ok()
         except Exception as e:

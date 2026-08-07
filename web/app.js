@@ -72,6 +72,19 @@ function temp(c) {
     : Math.round(c) + ' °C';
 }
 
+/* Money is only ever shown in the currency it was entered in; nothing is
+   converted. Intl knows the symbol, where it goes and how many decimals each
+   currency uses, so 1234.5 reads as 1.234,50 € in Spanish and ¥1,235 in
+   Japanese without a symbol table to maintain. */
+function money(n) {
+  const cur = S.settings.currency || 'EUR';
+  try {
+    return Number(n || 0).toLocaleString(locale(), { style: 'currency', currency: cur });
+  } catch (e) {
+    return Number(n || 0).toFixed(2) + ' ' + cur;
+  }
+}
+
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => todayISO().slice(0, 8) + '01';
 
@@ -250,6 +263,7 @@ const ICONS = {
   gauge: '<path d="M4 17a8 8 0 1 1 16 0"/><path d="m12 17 4.2-5"/>',
   trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7"/><path d="M10 11v5M14 11v5"/>',
   drop: '<path d="M12 3.5c3.6 4 6 7 6 9.8a6 6 0 0 1-12 0c0-2.8 2.4-5.8 6-9.8z"/>',
+  coin: '<ellipse cx="12" cy="7" rx="7.5" ry="3.4"/><path d="M4.5 7v10c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4V7"/><path d="M4.5 12c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4"/>',
   palette: '<circle cx="12" cy="12" r="8.2"/><circle cx="9.2" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="15.2" r="1.1" fill="currentColor" stroke="none"/>',
   link: '<path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7l-1.4 1.4"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.4-1.4"/>',
   bang: '<path d="M12 3.6 2.6 19.8h18.8z"/><path d="M12 9.6v4.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>',
@@ -536,6 +550,10 @@ async function openDetail(f) {
     </div>
 
     ${specsBlock(d.specs, fil)}
+    ${fil.price ? `<div class="det-price">
+      <span class="spec"><i>${esc(t('detail.price'))}</i><b>${esc(money(fil.price))}</b></span>
+      <span class="spec"><i>${esc(t('detail.perKg'))}</i><b>${esc(money(fil.price_per_g * 1000))}</b></span>
+    </div>` : ''}
 
     <h3 class="sub-head">${esc(t('detail.rolls'))}</h3>
     ${d.rolls.length ? `<div class="det-rolls">${d.rolls.map((r) => `
@@ -580,6 +598,8 @@ function renderSpares() {
       <select class="sp-brand">${brandOptions(s.brand)}</select>
       <select class="sp-type">${typeOptions(s.spool_type)}</select>
       <input type="number" class="sp-weight" min="1" step="10" value="${s.weight}">
+      <input type="number" class="sp-price" min="0" step="0.01" value="${s.price || ''}"
+             placeholder="${esc(t('spares.price'))}">
       <button class="icon-btn" title="${esc(t('print.remove'))}">${svg('close')}</button>
     </div>`).join('')
     : `<div class="spares-empty">${esc(t('spares.empty'))}</div>`;
@@ -593,11 +613,13 @@ function renderSpares() {
         brand: sel.value === OTHER ? (prompt(t('brand.otherPh')) || '') : sel.value,
         spool_type: row.querySelector('.sp-type').value,
         weight: Number(row.querySelector('.sp-weight').value) || 1000,
+        price: Number(row.querySelector('.sp-price').value) || 0,
       });
       await reload();
     };
     row.querySelector('.sp-brand').onchange = save;
     row.querySelector('.sp-type').onchange = save;
+    row.querySelector('.sp-price').onchange = save;
     row.querySelector('.sp-weight').onchange = save;
     row.querySelector('button').onclick = async () => {
       await call('delete_spare', sid);
@@ -622,12 +644,16 @@ function filteredPrints() {
 
 function renderHistory() {
   const list = filteredPrints();
+  // the cost column only earns its space once something has a price
+  const showCost = !!S.stats.has_prices;
+  $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
     <tr>
       <td class="date">${fdate(p.date)}</td>
       <td class="proj" title="${esc(p.notes)}">${esc(p.project)}${failTag(p)}</td>
       <td><div class="fchips">${p.items.map(chip).join('')}</div></td>
       <td class="total right">${g(p.total)} g</td>
+      <td class="cost right">${p.cost ? esc(money(p.cost)) : ''}</td>
       <td>
         <div class="row-actions">
           ${p.url ? `<button class="icon-btn" data-plink="${p.id}"
@@ -646,6 +672,8 @@ function renderHistory() {
   em.innerHTML = S.prints.length
     ? `<b>${esc(t('his.noResults'))}</b>${esc(t('his.noResultsSub'))}`
     : `<b>${esc(t('his.empty'))}</b>${esc(t('his.emptySub'))}`;
+
+  $$('#historyTable td.cost').forEach((el) => { el.hidden = !showCost; });
 
   const find = (id) => S.prints.find((p) => p.id == id);
   $$('[data-pedit]').forEach((b) => { b.onclick = () => openPrint(find(b.dataset.pedit)); });
@@ -755,6 +783,11 @@ function renderStats() {
       foot: `${t('kpi.wastedFoot', { n: st.failed_prints || 0 })} · ${t('kpi.wastedPct', { p: g(pct) })}`,
       hint: t('kpi.hint.wasted'),
       action: () => gotoHistory({ failedOnly: true }) },
+    ...(st.has_prices ? [{
+      label: t('kpi.spent'), value: money(st.total_cost), icon: 'coin',
+      foot: t('kpi.spentFoot', { v: money(st.month_cost) }), hint: t('kpi.hint.spent'),
+      action: () => gotoHistory(),
+    }] : []),
     { label: t('kpi.filaments'), value: String(st.n_filaments || 0), icon: 'palette',
       tone: st.n_low ? 'warn' : 'ok', foot: t('kpi.filamentsFoot', { n: st.n_low || 0 }),
       hint: st.n_low ? t('kpi.hint.low') : t('kpi.hint.inventory'),
@@ -776,6 +809,14 @@ function renderSettings() {
   $('#setLang').innerHTML = Object.entries(LANGS)
     .map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('');
   $('#setLang').value = S.lang;
+  const cur = S.settings.currency || 'EUR';
+  const names = (() => {
+    try { return new Intl.DisplayNames([locale()], { type: 'currency' }); } catch (e) { return null; }
+  })();
+  $('#setCurrency').innerHTML = CURRENCIES.map((c) => {
+    const label = names ? `${c} · ${names.of(c)}` : c;
+    return `<option value="${c}"${c === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  }).join('');
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setLow').value = S.settings.low_threshold_pct ?? 15;
   $('#setSpool').value = S.settings.default_spool_g ?? 1000;
@@ -887,6 +928,7 @@ function openFilament(f) {
   setBrand('#fBrand', '#fBrandOther', f ? (f.roll_brand || '') : '');
   $('#fType').innerHTML = typeOptions(f ? f.roll_type : 'plastic');
   $('#fStock').value = f ? f.stock : 0;
+  $('#fPrice').value = f && f.price ? f.price : '';
   $('#fWeight').value = f ? f.roll_weight : (S.settings.default_spool_g || 1000);
   $('#fOpened').value = f ? (f.roll_opened || todayISO()) : todayISO();
   $('#fNotes').value = f ? f.notes : '';
@@ -932,6 +974,7 @@ async function saveFilament() {
     brand: readBrand('#fBrand', '#fBrandOther'),
     spool_type: $('#fType').value,
     stock: Number($('#fStock').value) || 0,
+    price: Number($('#fPrice').value) || 0,
     notes: $('#fNotes').value.trim(),
     archived: $('#fArchived').checked ? 1 : 0,
     roll_weight: Number($('#fWeight').value) || 1000,
@@ -972,6 +1015,8 @@ function openRoll(f, mode = 'new') {
         <label class="field"><span>${esc(t('roll.opened'))}</span>
           <input type="date" id="rOpened" value="${todayISO()}"></label>
       </div>
+      <label class="field"><span>${esc(t('roll.price'))} <i>${esc(t('common.optional'))}</i></span>
+        <input type="number" id="rPrice" min="0" step="0.01" value="${f.price || ''}"></label>
       <div class="form-grid">
         <label class="field"><span>${esc(t('fil.brand'))}</span>
           <select id="rBrand" class="brand-sel">${brandOptions(f.roll_brand || '')}</select>
@@ -1038,6 +1083,7 @@ function openRoll(f, mode = 'new') {
     setBrand('#rBrand', '#rBrandOther', sp.brand || '');
     $('#rType').value = sp.spool_type || 'plastic';
     $('#rWeight').value = sp.weight;
+    if (sp.price) $('#rPrice').value = sp.price;
   };
   // the tare in the scale panel follows the chosen brand and type
   const syncTare = () => {
@@ -1057,6 +1103,7 @@ async function saveRoll() {
       id: f.id, weight: Number($('#rWeight').value) || f.roll_weight,
       opened: $('#rOpened').value || todayISO(),
       brand: readBrand('#rBrand', '#rBrandOther'), spool_type: $('#rType').value,
+      price: Number($('#rPrice').value) || 0,
       spare_id: $('#rSpare').value || null,
     });
     if (failed(r)) return;
@@ -1171,6 +1218,7 @@ function wire() {
     const r = await call('save_settings', {
       lang: $('#setLang').value,
       temp_unit: $('#setTempUnit').value,
+      currency: $('#setCurrency').value,
       low_threshold_pct: Number($('#setLow').value) || 15,
       default_spool_g: Number($('#setSpool').value) || 1000,
     });
