@@ -56,7 +56,7 @@ secarlo bastante más a menudo que el PLA.
 
 ## Descargar
 
-**1.** Descarga **`Filament Tracker.exe`** de la
+**1.** Descarga **`FilamentTracker.exe`** de la
 [última versión](../../releases/latest).
 
 **2.** Ponlo donde quieras: el Escritorio, Documentos, un pendrive.
