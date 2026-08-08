@@ -112,6 +112,7 @@ DEFAULT_SETTINGS = {
     "default_spool_g": "1000",     # default weight of a new roll
     "warn_no_stock": "1",          # warn when a roll runs low with no spare
     "lang": "",                    # interface language ("" = detect from the OS)
+    "theme": "dark",               # dark | light | auto (follow the system)
     "currency": "EUR",             # what prices are entered in; never converted
     "slicer_watch": "1",           # offer a print when Bambu Studio slices one
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)

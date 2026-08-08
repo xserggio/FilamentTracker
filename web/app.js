@@ -34,6 +34,18 @@ function t(key, vars) {
 
 const locale = () => (LANGS[S.lang] || LANGS.en).locale;
 
+/* The stylesheet declares the palette twice and picks by data-theme, so
+   switching is one attribute and no reload. "auto" follows Windows, which the
+   browser reports through prefers-color-scheme. */
+const systemDark = () => !window.matchMedia
+  || window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+function applyTheme(theme) {
+  const want = theme || S.settings.theme || 'dark';
+  const dark = want === 'auto' ? systemDark() : want !== 'light';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+}
+
 function applyI18n() {
   document.documentElement.lang = S.lang;
   $$('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
@@ -856,6 +868,7 @@ function renderSettings() {
     const label = names ? `${c} · ${names.of(c)}` : c;
     return `<option value="${c}"${c === cur ? ' selected' : ''}>${esc(label)}</option>`;
   }).join('');
+  $('#setTheme').value = S.settings.theme || 'dark';
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
   $('#setSlicerDir').value = S.settings.slicer_dir || '';
@@ -1486,9 +1499,15 @@ function wire() {
     renderAll();
     await call('save_settings', { lang: S.lang });
   };
+  $('#setTheme').onchange = (e) => applyTheme(e.target.value);
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => { if (S.settings.theme === 'auto') applyTheme(); });
+  }
   $('#saveSettings').onclick = async () => {
     const r = await call('save_settings', {
       lang: $('#setLang').value,
+      theme: $('#setTheme').value,
       temp_unit: $('#setTempUnit').value,
       currency: $('#setCurrency').value,
       slicer_watch: $('#setSlicerWatch').checked ? '1' : '0',
@@ -1497,6 +1516,7 @@ function wire() {
     });
     if (failed(r)) return;
     await reload();
+    applyTheme();
     toast(t('toast.prefsSaved'));
   };
   $('#saveDry').onclick = async () => {
@@ -1564,6 +1584,7 @@ async function boot() {
   const d = await call('bootstrap');
   if (failed(d) || !d) return;
   absorb(d);
+  applyTheme();
   applyI18n();
   setView('dashboard');
 
