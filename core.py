@@ -126,20 +126,55 @@ DRY_DAYS = {
     # --- PLA and its variants ---
     "PLA": 60, "PLA+": 60, "PLA HS": 60, "PLA Silk": 60, "PLA Matte": 60,
     "PLA Glow": 45, "PLA Marble": 45, "PLA-CF": 45, "PLA Metal": 30, "PLA Wood": 30,
+    "PLA Wood": 30, "PLA+WOOD": 30, "Wood": 30, "Flax": 30, "PLA Pearl": 60,
     # --- polyesters ---
-    "PETG": 30, "PETG-CF": 25, "PCTG": 25, "PET": 20,
+    "PETG": 30, "PETG HF": 30, "PETG Rapid": 30, "PETG Translucent": 30,
+    "PETG-CF": 25, "PCTG": 25, "PET": 20, "PET-CF": 20,
     # --- styrenics ---
-    "ABS": 45, "ABS-GF": 40, "ASA": 45, "HIPS": 45,
-    # --- flexibles ---
-    "TPU": 14, "TPE": 14,
+    "ABS": 45, "ABS+": 45, "ABS-GF": 40, "ABS+GF20": 40,
+    "ASA": 45, "ASA-CF": 40, "ASA-GF": 40, "HIPS": 45,
+    # --- flexibles: the hardness grade does not change how thirsty it is ---
+    "TPU": 14, "TPU-85A": 14, "TPU-90A": 14, "TPU-95A": 14, "TPU-55D": 14,
+    "TPU-CF": 12, "TPE": 14,
     # --- engineering ---
-    "PC": 14, "PC-CF": 12, "PP": 30, "PPS-CF": 12, "PEEK": 10, "PEI": 10,
+    "PC": 14, "PC-CF": 12, "PC+ABS": 20, "PP": 30, "PPS-CF": 12,
+    "PEEK": 10, "PEI": 10, "PVDF": 20, "PVB": 30,
     # --- polyamides: the thirstiest of the lot ---
-    "PA": 7, "PA-CF": 7, "PA6": 7, "PA12": 10, "Nylon": 7,
+    "PA": 7, "PA-CF": 7, "PA6": 7, "PA6-CF": 7, "PA6-GF": 7,
+    "PA12": 10, "PA12-CF": 10, "PAHT-CF": 7, "Nylon": 7,
+    # --- bio-based ---
+    "PHA": 30, "GreenTEC": 45, "GreenTEC-CF": 40,
     # --- soluble supports ---
     "PVA": 5, "BVOH": 5, "Support": 30,
 }
 DRY_FALLBACK = 45
+
+
+def dry_limit_for(material: str, table: dict) -> int:
+    """Days of leeway for a material, falling back to its family.
+
+    Manufacturers name products faster than any list can follow -- PETG Rapid,
+    TPU-95A, PA6-CF -- and a name nobody has typed into the table used to land on
+    the flat 45-day fallback, which for a PETG is wrong by half. What decides how
+    fast a spool drinks is the plastic, not the trade name, so an unknown
+    material is reduced to its family: everything up to the first separator, and
+    then that stripped of its trailing digits.
+
+        "PETG Rapid" -> PETG -> 30      "TPU-95A"  -> TPU  -> 14
+        "PA6-CF"     -> PA6  -> 7       "ABS+ Pro" -> ABS  -> 45
+    """
+    name = (material or "").strip()
+    if not name:
+        return DRY_FALLBACK
+    lower = {k.lower(): v for k, v in table.items()}
+    if name.lower() in lower:
+        return lower[name.lower()]
+
+    head = re.split(r"[\s\-+_/]", name, 1)[0]
+    for guess in (head, re.sub(r"\d+$", "", head)):
+        if guess and guess.lower() in lower:
+            return lower[guess.lower()]
+    return DRY_FALLBACK
 
 # Empty spool weight (tare) in grams, by brand and spool type.
 #
@@ -466,7 +501,7 @@ class Store:
 
             # A freshly opened spool comes dry from the factory, so if it has never
             # been dried the clock runs from the opening date.
-            dry_limit = int(dry_days.get(r["material"], DRY_FALLBACK))
+            dry_limit = dry_limit_for(r["material"], dry_days)
             since_dry = days_since(dried or opened)
             # sealed plastic is dry: the clock starts when the bag is opened
             needs_dry = not sealed and since_dry is not None and since_dry > dry_limit

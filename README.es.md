@@ -259,7 +259,14 @@ En la tarjeta aparece una gota: azul con los días transcurridos cuando va bien,
 
 Los límites dependen del plástico y están en **Ajustes → Secado por material**. De
 partida: PLA y sus variantes 60 días, PLA-CF/ABS/ASA 45, PETG 30, TPU y PC 14,
-PA/Nylon/PVA 7. Lo que no esté en la lista usa 45.
+PA/Nylon/PVA 7.
+
+Hay unos sesenta materiales en la lista, pero los fabricantes sacan nombres más
+rápido de lo que ninguna lista puede seguir. Lo que no reconozca tira de **su
+familia**, no de un número fijo: `PETG Rapid` es un PETG y le tocan 30 días,
+`TPU-95A` es un TPU y le tocan 14, `PA6-CF` es una poliamida y le tocan 7. El campo
+de material es texto libre, así que escribe lo que ponga en la caja — y si no estás
+de acuerdo con el intervalo, se puede cambiar.
 
 ### Pesar un rollo
 
