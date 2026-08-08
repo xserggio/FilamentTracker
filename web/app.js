@@ -1556,6 +1556,11 @@ function wire() {
   $('#btnResetSlicerDir').onclick = () => saveSlicerDir('');
   $('#setSlicerDir').onchange = (e) => saveSlicerDir(e.target.value.trim());
 
+  $('#helpRepo').onclick = (e) => {
+    e.preventDefault();
+    call('open_url', 'https://github.com/xserggio/FilamentTracker#manual');
+  };
+
   $('#amsClear').onclick = () => setAmsSlot(null);
   $('#amsUnits').onchange = async (e) => {
     const r = await call('save_settings', { ams_units: e.target.value });
