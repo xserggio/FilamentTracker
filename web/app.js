@@ -1097,7 +1097,10 @@ async function savePrint() {
 function sealedToggled() {
   const on = $('#fSealed').checked;
   $('#fOpenedField').hidden = on;
-  if (on && Number($('#fStock').value) < 1) $('#fStock').value = 1;
+  // Creating: there is no spool anywhere yet, so one has to be put in stock.
+  // Editing: the fitted roll IS the spool and becomes the spare itself, so
+  // adding one here would turn one spool into two.
+  if (on && !S.editingFilament && Number($('#fStock').value) < 1) $('#fStock').value = 1;
 }
 
 /* ---------- MODAL: filament ---------- */
@@ -1113,9 +1116,13 @@ function openFilament(f) {
   $('#fPrice').value = f && f.price ? f.price : '';
   $('#fWeight').value = f ? f.roll_weight : (S.settings.default_spool_g || 1000);
   $('#fOpened').value = f ? (f.roll_opened || todayISO()) : todayISO();
-  // only offered when creating: turning an open roll back into a sealed one
-  // would mean throwing away its history
-  $('#fSealedRow').hidden = !!f;
+  // Offered when creating, and when correcting a filament recorded as open
+  // before it ever was -- which is only safe while nothing has been printed
+  // from the roll, because after that the roll is the window those grams are
+  // counted in.
+  $('#fSealedRow').hidden = !!f && !f.can_seal;
+  $('#fSealedRow').querySelector('.hint').textContent =
+    t(f ? 'fil.sealedHintEdit' : 'fil.sealedHint');
   $('#fSealed').checked = false;
   sealedToggled();
   $('#fNotes').value = f ? f.notes : '';
@@ -1166,9 +1173,9 @@ async function saveFilament() {
     archived: $('#fArchived').checked ? 1 : 0,
     roll_weight: Number($('#fWeight').value) || 1000,
     roll_opened: $('#fOpened').value || todayISO(),
-    sealed: !S.editingFilament && $('#fSealed').checked ? 1 : 0,
+    sealed: $('#fSealed').checked && !$('#fSealedRow').hidden ? 1 : 0,
   };
-  if (data.sealed) data.stock = Math.max(1, data.stock);
+  if (data.sealed && !S.editingFilament) data.stock = Math.max(1, data.stock);
   if (!data.name && !data.color) return toast(t('toast.needColor'), 'error');
   const res = await call('save_filament', data);
   if (failed(res)) return;

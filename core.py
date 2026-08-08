@@ -550,6 +550,12 @@ class Store:
                     "remaining": round(remaining, 2),
                     "pct": round(pct, 1),
                     "sealed": sealed,
+                    # A roll nothing has been printed from, on a filament that
+                    # has only ever had this one, is a spool that was recorded as
+                    # open by mistake: it can go back to the drawer without
+                    # losing anything. Once it has been printed from, the roll is
+                    # the window those grams are counted in, so it stays.
+                    "can_seal": not sealed and rolls_used <= 1 and used <= 0 and adjust == 0,
                     # unopened is not "empty": there is nothing wrong with it, so
                     # it raises no alert and does not count towards low spools
                     "low": not sealed and pct < low_pct,
@@ -608,6 +614,33 @@ class Store:
             self.add_spare(fid, brand=brand, weight=weight, spool_type=stype, price=price)
         return fid
 
+    def seal(self, fid: int):
+        """Take the fitted roll off and put that spool back in the drawer.
+
+        For a spool recorded as open before it ever was. The roll is not thrown
+        away so much as moved: it becomes a spare with the same weight, brand,
+        type and price, because the physical spool is still on the shelf.
+        """
+        roll = self.current_roll(fid)
+        if roll is None:
+            return
+        used = self.db.execute(
+            "SELECT COALESCE(SUM(pi.grams),0) g FROM print_items pi "
+            "JOIN prints p ON p.id = pi.print_id "
+            "WHERE pi.filament_id=? AND p.date >= ?",
+            (fid, roll["opened_at"]),
+        ).fetchone()["g"]
+        rolls = self.db.execute(
+            "SELECT COUNT(*) c FROM rolls WHERE filament_id=?", (fid,)
+        ).fetchone()["c"]
+        if used > 0 or float(roll["adjust"]) != 0 or rolls > 1:
+            raise ValueError("That roll has been printed from, so it cannot be sealed again.")
+
+        self.add_spare(fid, brand=roll["brand"], weight=roll["weight"],
+                       spool_type=roll["spool_type"], price=roll["price"])
+        self.db.execute("DELETE FROM rolls WHERE id=?", (roll["id"],))
+        self.db.commit()
+
     def update_filament(self, fid: int, data: dict):
         cur = self.db.execute("SELECT * FROM filaments WHERE id=?", (fid,)).fetchone()
         if cur is None:
@@ -649,6 +682,8 @@ class Store:
         self.db.commit()
         if "stock" in data:
             self.set_stock(fid, data["stock"])
+        if data.get("sealed"):
+            self.seal(fid)
 
     def delete_filament(self, fid: int):
         self.db.execute("DELETE FROM filaments WHERE id=?", (fid,))
