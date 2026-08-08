@@ -55,8 +55,7 @@ secarlo bastante más a menudo que el PLA.
   proyectos que más consumen y material desperdiciado.
 - **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
 - **Pestaña AMS.** Qué rollo hay en cada hueco ahora mismo, con la bobina externa.
-- **Claro y oscuro.** Oscuro por defecto; el claro está pensado aparte, no es el
-  inverso, y cualquiera de los dos puede seguir a Windows.
+- **Claro y oscuro.** Oscuro por defecto, y cualquiera de los dos puede seguir a Windows.
 - **Ayuda dentro de la app.** La versión corta de este manual, a un clic.
 - **Seis idiomas.** Español, inglés, francés, alemán, portugués e italiano.
 
@@ -65,12 +64,10 @@ secarlo bastante más a menudo que el PLA.
 **1.** Descarga **`FilamentTracker.exe`** de la
 [última versión](../../releases/latest).
 
-**2.** Ponlo donde quieras: el Escritorio, Documentos, un pendrive.
+**2.** Doble clic donde lo hayas dejado.
 
-**3.** Doble clic. Ya está.
-
-Sin instalador, sin Python y sin línea de comandos. Es un solo archivo; la primera
-vez que lo abras aparecerá a su lado una carpeta `data` con tu base de datos dentro.
+Sin instalador, sin Python y sin línea de comandos. La primera vez que lo abras
+aparecerá a su lado una carpeta `data` con tu base de datos dentro.
 
 <details>
 <summary><b>Windows dice «Windows protegió tu PC»</b></summary>
@@ -104,11 +101,11 @@ atrás, la app arrancará vacía.
 
 ### El modelo en un párrafo
 
-Un **filamento** es un material y un color con los que imprimes — `PLA - black`. En
-cada momento tiene un **rollo** puesto, con su peso, su fecha de apertura, su marca
-y su tipo de bobina. Puede tener además **repuestos** esperando en un cajón, cada
-uno con su marca, tipo y peso. Una **impresión** guarda una fecha, un proyecto y
-cuántos gramos gastó de cada filamento.
+La app tiene tres cosas: **filamentos**, cada uno con un **rollo** puesto y con los
+**repuestos** que tengas en el cajón, e **impresiones** que gastan gramos de un
+filamento. Cada rollo y cada repuesto guardan su propia marca, tipo de bobina,
+peso y precio, así que un mismo filamento puede pasar de un fabricante a otro sin
+cambiar de nombre.
 
 Los gramos que quedan en el rollo puesto son:
 
@@ -163,9 +160,9 @@ La búsqueda va de lo concreto a lo general, y dice de dónde ha salido el dato:
 | la marca | la gama propia de esa marca para ese material |
 | típico | el rango habitual de ese plástico, lo haga quien lo haga |
 
-Así, un rollo al que nunca le pusiste marca sigue mostrando algo útil, y lo dice
-en vez de aparentar que lo sabe. En Ajustes hay un selector **°C / °F**; los datos
-se guardan siempre en Celsius.
+Un rollo sin marca cae en el rango típico de su plástico, y la ficha dice cuál de
+los tres orígenes está usando. En Ajustes hay un selector **°C / °F**; los datos se
+guardan siempre en Celsius.
 
 Los colores reales de la marca también aparecen en el selector de color: *Bambu
 Lab · PLA Matte* propone los quince mates que vende de verdad en lugar de una
@@ -387,11 +384,8 @@ visor de SQLite vale.
 párrafo, qué hace cada control de la tarjeta, secado, pesar un rollo, Bambu
 Studio, la pestaña AMS y dónde viven los datos.
 
-**Ajustes → Aspecto** cambia entre oscuro, claro o lo que tenga Windows. El
-oscuro es el predeterminado. El claro no es el oscuro invertido: los grises
-llevan un sesgo cálido para que cualquier filamento se asiente sin dominante,
-los colores semánticos se oscurecen para mantener contraste sobre blanco, y la
-elevación se hace con sombra en vez de con una superficie más clara.
+**Ajustes → Aspecto** cambia entre oscuro, claro o lo que tenga Windows, sin
+reiniciar. El oscuro es el predeterminado.
 
 <img src="docs/light.png" alt="El tema claro">
 
