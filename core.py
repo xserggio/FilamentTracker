@@ -1258,16 +1258,42 @@ class Store:
                 "GROUP BY f.id ORDER BY g DESC"
             )
         ]
+        # Every bar in Statistics is made of the filaments that made it, so each
+        # one carries the split it is built from -- the same idea as the monthly
+        # chart, and the reason none of them needs an invented colour.
+        def split_by(key_sql, group_sql):
+            out = {}
+            for r in db.execute(
+                "SELECT %s k, f.name, f.hex, COALESCE(SUM(pi.grams),0) g "
+                "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+                "JOIN filaments f ON f.id = pi.filament_id "
+                "GROUP BY %s ORDER BY g DESC" % (key_sql, group_sql)
+            ):
+                out.setdefault(r["k"], []).append(
+                    {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
+            return out
+
+        mat_split = split_by("f.material", "f.material, f.id")
+        mat_prints = {r["m"]: r["n"] for r in db.execute(
+            "SELECT f.material m, COUNT(DISTINCT pi.print_id) n FROM print_items pi "
+            "JOIN filaments f ON f.id = pi.filament_id GROUP BY f.material")}
         by_material = [
-            {"material": r["material"], "grams": round(r["g"], 2)}
+            {"material": r["material"], "grams": round(r["g"], 2),
+             "prints": mat_prints.get(r["material"], 0),
+             "split": mat_split.get(r["material"], [])}
             for r in db.execute(
                 "SELECT f.material, COALESCE(SUM(pi.grams),0) g "
                 "FROM print_items pi JOIN filaments f ON f.id = pi.filament_id "
                 "GROUP BY f.material ORDER BY g DESC"
             )
         ]
+        proj_split = split_by("p.project", "p.project, f.id")
+        proj_prints = {r["project"]: r["n"] for r in db.execute(
+            "SELECT project, COUNT(*) n FROM prints GROUP BY project")}
         top_projects = [
-            {"project": r["project"], "grams": round(r["g"], 2)}
+            {"project": r["project"], "grams": round(r["g"], 2),
+             "prints": proj_prints.get(r["project"], 0),
+             "split": proj_split.get(r["project"], [])}
             for r in db.execute(
                 "SELECT p.project, COALESCE(SUM(pi.grams),0) g FROM prints p "
                 "JOIN print_items pi ON pi.print_id = p.id "

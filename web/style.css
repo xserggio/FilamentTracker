@@ -424,13 +424,27 @@ tr:hover .row-actions{opacity:1}
 
 /* ============ charts ============ */
 .bars{display:flex;flex-direction:column;gap:11px}
-.brow{display:grid;grid-template-columns:132px 1fr 68px;align-items:center;gap:11px}
-.brow .bl{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  display:flex;align-items:center;gap:7px}
-.brow .bl i{width:9px;height:9px;border-radius:var(--r-xs);flex:none;border:1px solid var(--swatch-ring)}
-.brow .bt{height:8px;border-radius:999px;background:var(--sunken);overflow:hidden}
-.brow .bt > i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .4s}
-.brow .bv{font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.brow{display:grid;grid-template-columns:150px 1fr 76px;align-items:center;gap:11px;
+  padding:5px 7px;margin:0 -7px;border-radius:var(--r-sm);transition:background .12s}
+.brow.go{cursor:pointer}
+.brow.go:hover{background:var(--hover)}
+.brow.go:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.brow .bl{font-size:12px;color:var(--muted);min-width:0;display:flex;align-items:center;gap:8px}
+.brow .bl i{width:11px;height:11px;border-radius:var(--r-xs);flex:none;border:1px solid var(--swatch-ring)}
+.brow .bl-txt{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .bl-txt small{display:block;color:var(--muted-2);font-size:var(--t-xs)}
+/* The track shows the full width so a short bar has something to be short
+   against; the bar itself is built from the filaments that made it. The ring is
+   what keeps a black filament from disappearing into a dark background. */
+.brow .btrack{height:9px;border-radius:999px;background:var(--sunken);
+  box-shadow:inset 0 0 0 1px var(--line-soft);overflow:hidden}
+.brow .bt{height:100%;border-radius:999px;overflow:hidden;display:flex;min-width:3px;
+  box-shadow:inset 0 0 0 1px var(--swatch-ring);transition:width .4s}
+.brow .bt > i{display:block;height:100%;min-width:1px;box-shadow:inset -1px 0 0 var(--swatch-ring)}
+.brow .bt > i:last-child{box-shadow:none}
+.brow.go:hover .bt > i{filter:brightness(1.14)}
+.brow .bv{font-size:12px;font-weight:600;text-align:right;color:var(--muted)}
+.brow .bv small{display:block;color:var(--muted-2);font-size:var(--t-xs);font-weight:400}
 
 .columns{display:flex;align-items:flex-end;gap:10px;height:190px;padding-top:10px}
 .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;min-width:0}

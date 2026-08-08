@@ -308,17 +308,17 @@ function renderKpis(el, defs) {
 }
 
 /* ---------- jumps with filters already applied ---------- */
-function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name' } = {}) {
-  S.inv = { search: '', material: '', sort, lowOnly, stockOnly, archived: false };
-  $('#invSearch').value = ''; $('#invMaterial').value = '';
+function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name', material = '' } = {}) {
+  S.inv = { search: '', material, sort, lowOnly, stockOnly, archived: false };
+  $('#invSearch').value = ''; $('#invMaterial').value = material;
   $('#invSort').value = sort; $('#invLowOnly').checked = lowOnly;
   $('#invStockOnly').checked = stockOnly; $('#invArchived').checked = false;
   setView('inventory');
 }
 
-function gotoHistory({ from = '', to = '', failedOnly = false } = {}) {
-  S.his = { search: '', filament: '', from, to, failedOnly };
-  $('#hisSearch').value = ''; $('#hisFilament').value = '';
+function gotoHistory({ from = '', to = '', failedOnly = false, search = '' } = {}) {
+  S.his = { search, filament: '', from, to, failedOnly };
+  $('#hisSearch').value = search; $('#hisFilament').value = '';
   $('#hisFrom').value = from; $('#hisTo').value = to;
   $('#hisFailed').checked = failedOnly;
   setView('history');
@@ -817,15 +817,41 @@ function columns(data) {
   }).join('')}</div>`;
 }
 
+/* Every bar is made of the filaments that made it, so none of them needs an
+   invented colour: a material or a project is drawn from the same palette that
+   is sitting in the drawer. And every row leads somewhere, because the obvious
+   next question about a figure is "which ones?". */
 function bars(rows, opts = {}) {
   if (!rows.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
   const max = Math.max(...rows.map((r) => r.value), 1);
-  return `<div class="bars">${rows.map((r) => `
-    <div class="brow">
-      <span class="bl" title="${esc(r.label)}">${r.hex ? `<i style="background:${esc(r.hex)}"></i>` : ''}${esc(r.label)}</span>
-      <span class="bt"><i style="width:${(r.value / max) * 100}%;${opts.color ? `background:${opts.color}` : ''}"></i></span>
-      <span class="bv">${g(r.value)} g</span>
-    </div>`).join('')}</div>`;
+  const total = rows.reduce((a, r) => a + r.value, 0) || 1;
+
+  const html = `<div class="bars">${rows.map((r, i) => {
+    const split = (r.split && r.split.length) ? r.split
+      : [{ hex: r.hex || '', grams: r.value, name: r.label }];
+    return `<div class="brow${r.action ? ' go' : ''}"${r.action ? ` data-b="${i}" role="button" tabindex="0"` : ''}>
+      <span class="bl" title="${esc(r.label)}">
+        ${r.hex ? `<i style="background:${esc(r.hex)}"></i>` : ''}
+        <span class="bl-txt">${esc(r.label)}<small>${esc(r.sub || '')}</small></span>
+      </span>
+      <span class="btrack"><span class="bt" style="width:${(r.value / max) * 100}%">
+        ${split.map((p) => `<i style="width:${(p.grams / r.value) * 100}%;background:${
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name || '')} · ${g(p.grams)} g"></i>`).join('')}
+      </span></span>
+      <span class="bv">${g(r.value)} g<small>${g((r.value / total) * 100)} %</small></span>
+    </div>`;
+  }).join('')}</div>`;
+
+  return html;
+}
+
+/* bars() only builds the markup; the rows are wired once they are in the DOM */
+function wireBars(el, rows) {
+  $$('[data-b]', el).forEach((n) => {
+    const act = rows[+n.dataset.b].action;
+    n.onclick = act;
+    n.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } };
+  });
 }
 
 function renderStats() {
@@ -858,13 +884,33 @@ function renderStats() {
   ]);
 
   $('#chartMonths').innerHTML = columns(st.by_month || []);
-  $('#chartFilaments').innerHTML = bars(
-    (st.by_filament || []).slice(0, 12).map((f) => ({ label: f.name, value: f.grams, hex: f.hex })));
-  $('#chartMaterials').innerHTML = bars(
-    (st.by_material || []).map((m) => ({ label: m.material, value: m.grams })), { color: 'var(--ok)' });
-  $('#chartProjects').innerHTML = bars(
-    (st.top_projects || []).slice(0, 8).map((p) => ({ label: p.project, value: p.grams })),
-    { color: 'linear-gradient(90deg,#9d6ef5,#6f7df7)' });
+
+  // a filament leads to its own sheet, which is where its whole story is
+  const fil = (st.by_filament || []).slice(0, 12).map((f) => ({
+    label: f.name, value: f.grams, hex: f.hex,
+    sub: t('stats.prints', { n: f.prints }),
+    action: () => { const x = S.filaments.find((y) => y.name === f.name); if (x) openDetail(x); },
+  }));
+  $('#chartFilaments').innerHTML = bars(fil);
+  wireBars($('#chartFilaments'), fil);
+
+  // a material leads to the inventory showing only that material
+  const mat = (st.by_material || []).map((m) => ({
+    label: m.material, value: m.grams, split: m.split,
+    sub: t('stats.prints', { n: m.prints }),
+    action: () => gotoInventory({ material: m.material }),
+  }));
+  $('#chartMaterials').innerHTML = bars(mat);
+  wireBars($('#chartMaterials'), mat);
+
+  // a project leads to the history filtered to it
+  const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
+    label: p.project, value: p.grams, split: p.split,
+    sub: t('stats.prints', { n: p.prints }),
+    action: () => gotoHistory({ search: p.project }),
+  }));
+  $('#chartProjects').innerHTML = bars(proj);
+  wireBars($('#chartProjects'), proj);
 }
 
 /* ---------- SETTINGS ---------- */
