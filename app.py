@@ -249,6 +249,23 @@ class Api:
         except Exception as e:
             return err(e)
 
+    # ---------- the AMS ----------
+
+    def ams(self):
+        try:
+            return ok(self._store.ams())
+        except Exception as e:
+            traceback.print_exc()
+            return err(e)
+
+    def set_ams_slot(self, data):
+        try:
+            self._store.set_ams_slot(data.get("unit"), data.get("slot"),
+                                     data.get("filament_id"))
+            return ok()
+        except Exception as e:
+            return err(e)
+
     # ---------- what Bambu Studio just sliced ----------
 
     def slices(self, data=None):

@@ -10,6 +10,7 @@ const S = {
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
+  ams: [], amsTarget: null,
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -33,6 +34,18 @@ function t(key, vars) {
 }
 
 const locale = () => (LANGS[S.lang] || LANGS.en).locale;
+
+/* The stylesheet declares the palette twice and picks by data-theme, so
+   switching is one attribute and no reload. "auto" follows Windows, which the
+   browser reports through prefers-color-scheme. */
+const systemDark = () => !window.matchMedia
+  || window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+function applyTheme(theme) {
+  const want = theme || S.settings.theme || 'dark';
+  const dark = want === 'auto' ? systemDark() : want !== 'light';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+}
 
 function applyI18n() {
   document.documentElement.lang = S.lang;
@@ -181,6 +194,7 @@ function renderAll() {
   if (S.view === 'dashboard') renderDashboard();
   if (S.view === 'inventory') renderInventory();
   if (S.view === 'history') renderHistory();
+  if (S.view === 'ams') renderAms();
   if (S.view === 'stats') renderStats();
   if (S.view === 'settings') renderSettings();
   fillSelects();
@@ -273,6 +287,7 @@ const ICONS = {
   trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7"/><path d="M10 11v5M14 11v5"/>',
   drop: '<path d="M12 3.5c3.6 4 6 7 6 9.8a6 6 0 0 1-12 0c0-2.8 2.4-5.8 6-9.8z"/>',
   coin: '<ellipse cx="12" cy="7" rx="7.5" ry="3.4"/><path d="M4.5 7v10c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4V7"/><path d="M4.5 12c0 1.9 3.4 3.4 7.5 3.4s7.5-1.5 7.5-3.4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   palette: '<circle cx="12" cy="12" r="8.2"/><circle cx="9.2" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.8" cy="9.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="15.2" r="1.1" fill="currentColor" stroke="none"/>',
   link: '<path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7l-1.4 1.4"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.4-1.4"/>',
   bang: '<path d="M12 3.6 2.6 19.8h18.8z"/><path d="M12 9.6v4.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>',
@@ -296,17 +311,17 @@ function renderKpis(el, defs) {
 }
 
 /* ---------- jumps with filters already applied ---------- */
-function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name' } = {}) {
-  S.inv = { search: '', material: '', sort, lowOnly, stockOnly, archived: false };
-  $('#invSearch').value = ''; $('#invMaterial').value = '';
+function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name', material = '' } = {}) {
+  S.inv = { search: '', material, sort, lowOnly, stockOnly, archived: false };
+  $('#invSearch').value = ''; $('#invMaterial').value = material;
   $('#invSort').value = sort; $('#invLowOnly').checked = lowOnly;
   $('#invStockOnly').checked = stockOnly; $('#invArchived').checked = false;
   setView('inventory');
 }
 
-function gotoHistory({ from = '', to = '', failedOnly = false } = {}) {
-  S.his = { search: '', filament: '', from, to, failedOnly };
-  $('#hisSearch').value = ''; $('#hisFilament').value = '';
+function gotoHistory({ from = '', to = '', failedOnly = false, search = '' } = {}) {
+  S.his = { search, filament: '', from, to, failedOnly };
+  $('#hisSearch').value = search; $('#hisFilament').value = '';
   $('#hisFrom').value = from; $('#hisTo').value = to;
   $('#hisFailed').checked = failedOnly;
   setView('history');
@@ -478,6 +493,7 @@ function renderInventory() {
       </div>`}
 
       <div class="fcard-foot">
+        <div class="frow">
         <span class="used" title="${esc(f.sealed ? t('fil.sealedHint') : t('inv.openedTitle', {
           d: fdate(f.roll_opened), used: kg(f.total_used) }))}">${
           f.sealed ? esc(t('inv.sealed'))
@@ -493,6 +509,7 @@ function renderInventory() {
                 title="${esc(t('roll.mode.adjust'))}">${svg('scale')}</button>
         <button class="icon-btn sm" data-dry="${f.id}"
                 title="${esc(t('roll.mode.dry'))}">${svg('drop')}</button>`}
+        </div>
         <button class="btn sm" data-roll="${f.id}">${
           esc(t(f.sealed ? 'inv.openRoll' : 'inv.newRoll'))}</button>
       </div>
@@ -781,27 +798,139 @@ async function saveFail() {
   toast(isFailed ? t('fail.saved') : t('fail.cleared'));
 }
 
+/* ---------- AMS ----------
+   The printer cannot be asked what is loaded, so this is kept by hand. It earns
+   that by answering the question you have while standing in front of the
+   machine: which spool is in slot 3, and how much is left on it. */
+const amsName = (s) => (s.external ? t('ams.external')
+  : `${String.fromCharCode(64 + s.unit)}${s.slot}`);
+
+async function renderAms() {
+  $('#amsUnits').value = S.settings.ams_units ?? '1';
+  const list = await call('ams');
+  S.ams = failed(list) ? [] : (list || []);
+
+  $('#amsSlots').innerHTML = S.ams.map((s, i) => {
+    const f = s.filament;
+    return `<div class="ams-slot${f ? '' : ' is-empty'}${s.external ? ' is-ext' : ''}"
+                 data-ams="${i}" role="button" tabindex="0">
+      <div class="ams-head">
+        <span class="ams-id">${esc(amsName(s))}</span>
+        ${f ? `<span class="tag">${esc(f.material)}</span>` : ''}
+      </div>
+      ${f ? `
+      <div class="ams-body">
+        <span class="swatch" style="background:${esc(f.hex)}"></span>
+        <span class="ams-what">
+          <b>${esc(f.name)}</b>
+          <small>${f.sealed ? esc(t('inv.sealed')) : `${g(f.remaining)} g · ${f.pct.toFixed(0)} %`}</small>
+        </span>
+      </div>
+      <div class="bar"><i style="width:${Math.min(100, f.pct)}%;background:${statusColor(f)}"></i></div>`
+      : `<div class="ams-body"><span class="ams-free">${svg('plus')}${esc(t('ams.empty'))}</span></div>`}
+    </div>`;
+  }).join('');
+
+  $$('#amsSlots [data-ams]').forEach((n) => {
+    const open = () => openAmsPick(S.ams[+n.dataset.ams]);
+    n.onclick = open;
+    n.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } };
+  });
+}
+
+/* A spool can only be in one place, so the list says where each one already is
+   and loading it somewhere else takes it out of there. */
+function openAmsPick(slot) {
+  S.amsTarget = slot;
+  const here = slot.filament ? slot.filament.id : null;
+  const whereIs = {};
+  S.ams.forEach((x) => { if (x.filament) whereIs[x.filament.id] = amsName(x); });
+
+  $('#amsTitle').textContent = t('ams.pick', { slot: amsName(slot) });
+  $('#amsClear').hidden = !here;
+  $('#amsPick').innerHTML = S.filaments
+    .filter((f) => !f.archived)
+    .map((f) => `
+      <button class="ams-opt${f.id === here ? ' here' : ''}" data-fil="${f.id}">
+        <span class="swatch" style="background:${esc(f.hex)}"></span>
+        <b>${esc(f.name)}</b>
+        <small>${f.sealed ? esc(t('inv.sealed')) : `${g(f.remaining)} g`}${
+          whereIs[f.id] && f.id !== here ? ` · ${esc(t('ams.elsewhere', { slot: whereIs[f.id] }))}` : ''}</small>
+      </button>`).join('');
+
+  $$('#amsPick [data-fil]').forEach((b) => {
+    b.onclick = () => setAmsSlot(b.dataset.fil);
+  });
+  show('#amsModal');
+}
+
+async function setAmsSlot(filamentId) {
+  const s = S.amsTarget;
+  const r = await call('set_ams_slot', {
+    unit: s.unit, slot: s.slot, filament_id: filamentId || null });
+  if (failed(r)) return;
+  hide('#amsModal');
+  await renderAms();
+  toast(t(filamentId ? 'toast.amsSet' : 'toast.amsCleared'));
+}
+
 /* ---------- STATISTICS ---------- */
+/* The months are stacked in the colours of the filaments that made them.
+   Nothing invented and nothing decorative: it is the same palette sitting in
+   the drawer, and it turns a plain bar chart into a picture of what was
+   printed. A black filament on a dark ground would be a hole in the bar, so
+   every band carries a hairline. */
 function columns(data) {
   if (!data || !data.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
   const max = Math.max(...data.map((d) => d.grams), 1);
-  return `<div class="columns">${data.map((d) => `
-    <div class="col" title="${g(d.grams)} g · ${d.prints}">
+  return `<div class="columns">${data.map((d) => {
+    const split = (d.split || []).length ? d.split : [{ hex: '', name: '', grams: d.grams }];
+    return `<div class="col" title="${g(d.grams)} g · ${esc(t('stats.prints', { n: d.prints }))}">
       <span class="cv">${g(d.grams)}</span>
-      <span class="stack"><span class="fill" style="height:${Math.max(3, (d.grams / max) * 100)}%"></span></span>
+      <span class="stack"><span class="fill" style="height:${Math.max(3, (d.grams / max) * 100)}%">
+        ${split.map((p) => `<i style="height:${(p.grams / d.grams) * 100}%;background:${
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name)} · ${g(p.grams)} g"></i>`).join('')}
+      </span></span>
       <span class="cl">${fmonth(d.month)}</span>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 }
 
+/* Every bar is made of the filaments that made it, so none of them needs an
+   invented colour: a material or a project is drawn from the same palette that
+   is sitting in the drawer. And every row leads somewhere, because the obvious
+   next question about a figure is "which ones?". */
 function bars(rows, opts = {}) {
   if (!rows.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
   const max = Math.max(...rows.map((r) => r.value), 1);
-  return `<div class="bars">${rows.map((r) => `
-    <div class="brow">
-      <span class="bl" title="${esc(r.label)}">${r.hex ? `<i style="background:${esc(r.hex)}"></i>` : ''}${esc(r.label)}</span>
-      <span class="bt"><i style="width:${(r.value / max) * 100}%;${opts.color ? `background:${opts.color}` : ''}"></i></span>
-      <span class="bv">${g(r.value)} g</span>
-    </div>`).join('')}</div>`;
+  const total = rows.reduce((a, r) => a + r.value, 0) || 1;
+
+  const html = `<div class="bars">${rows.map((r, i) => {
+    const split = (r.split && r.split.length) ? r.split
+      : [{ hex: r.hex || '', grams: r.value, name: r.label }];
+    return `<div class="brow${r.action ? ' go' : ''}"${r.action ? ` data-b="${i}" role="button" tabindex="0"` : ''}>
+      <span class="bl" title="${esc(r.label)}">
+        ${r.hex ? `<i style="background:${esc(r.hex)}"></i>` : ''}
+        <span class="bl-txt">${esc(r.label)}<small>${esc(r.sub || '')}</small></span>
+      </span>
+      <span class="btrack"><span class="bt" style="width:${(r.value / max) * 100}%">
+        ${split.map((p) => `<i style="width:${(p.grams / r.value) * 100}%;background:${
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name || '')} · ${g(p.grams)} g"></i>`).join('')}
+      </span></span>
+      <span class="bv">${g(r.value)} g<small>${g((r.value / total) * 100)} %</small></span>
+    </div>`;
+  }).join('')}</div>`;
+
+  return html;
+}
+
+/* bars() only builds the markup; the rows are wired once they are in the DOM */
+function wireBars(el, rows) {
+  $$('[data-b]', el).forEach((n) => {
+    const act = rows[+n.dataset.b].action;
+    n.onclick = act;
+    n.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } };
+  });
 }
 
 function renderStats() {
@@ -834,13 +963,33 @@ function renderStats() {
   ]);
 
   $('#chartMonths').innerHTML = columns(st.by_month || []);
-  $('#chartFilaments').innerHTML = bars(
-    (st.by_filament || []).slice(0, 12).map((f) => ({ label: f.name, value: f.grams, hex: f.hex })));
-  $('#chartMaterials').innerHTML = bars(
-    (st.by_material || []).map((m) => ({ label: m.material, value: m.grams })), { color: 'var(--ok)' });
-  $('#chartProjects').innerHTML = bars(
-    (st.top_projects || []).slice(0, 8).map((p) => ({ label: p.project, value: p.grams })),
-    { color: 'linear-gradient(90deg,#9d6ef5,#6f7df7)' });
+
+  // a filament leads to its own sheet, which is where its whole story is
+  const fil = (st.by_filament || []).slice(0, 12).map((f) => ({
+    label: f.name, value: f.grams, hex: f.hex,
+    sub: t('stats.prints', { n: f.prints }),
+    action: () => { const x = S.filaments.find((y) => y.name === f.name); if (x) openDetail(x); },
+  }));
+  $('#chartFilaments').innerHTML = bars(fil);
+  wireBars($('#chartFilaments'), fil);
+
+  // a material leads to the inventory showing only that material
+  const mat = (st.by_material || []).map((m) => ({
+    label: m.material, value: m.grams, split: m.split,
+    sub: t('stats.prints', { n: m.prints }),
+    action: () => gotoInventory({ material: m.material }),
+  }));
+  $('#chartMaterials').innerHTML = bars(mat);
+  wireBars($('#chartMaterials'), mat);
+
+  // a project leads to the history filtered to it
+  const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
+    label: p.project, value: p.grams, split: p.split,
+    sub: t('stats.prints', { n: p.prints }),
+    action: () => gotoHistory({ search: p.project }),
+  }));
+  $('#chartProjects').innerHTML = bars(proj);
+  wireBars($('#chartProjects'), proj);
 }
 
 /* ---------- SETTINGS ---------- */
@@ -856,6 +1005,7 @@ function renderSettings() {
     const label = names ? `${c} · ${names.of(c)}` : c;
     return `<option value="${c}"${c === cur ? ' selected' : ''}>${esc(label)}</option>`;
   }).join('');
+  $('#setTheme').value = S.settings.theme || 'dark';
   $('#setTempUnit').value = S.settings.temp_unit || 'C';
   $('#setSlicerWatch').checked = S.settings.slicer_watch !== '0';
   $('#setSlicerDir').value = S.settings.slicer_dir || '';
@@ -1406,6 +1556,19 @@ function wire() {
   $('#btnResetSlicerDir').onclick = () => saveSlicerDir('');
   $('#setSlicerDir').onchange = (e) => saveSlicerDir(e.target.value.trim());
 
+  $('#helpRepo').onclick = (e) => {
+    e.preventDefault();
+    call('open_url', 'https://github.com/xserggio/FilamentTracker#manual');
+  };
+
+  $('#amsClear').onclick = () => setAmsSlot(null);
+  $('#amsUnits').onchange = async (e) => {
+    const r = await call('save_settings', { ams_units: e.target.value });
+    if (failed(r)) return;
+    S.settings.ams_units = e.target.value;
+    renderAms();
+  };
+
   $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);
   $('#sliceLater').onclick = () => hideSliceCard(false);
   $('#sliceDismiss').onclick = () => hideSliceCard(true);
@@ -1486,9 +1649,15 @@ function wire() {
     renderAll();
     await call('save_settings', { lang: S.lang });
   };
+  $('#setTheme').onchange = (e) => applyTheme(e.target.value);
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => { if (S.settings.theme === 'auto') applyTheme(); });
+  }
   $('#saveSettings').onclick = async () => {
     const r = await call('save_settings', {
       lang: $('#setLang').value,
+      theme: $('#setTheme').value,
       temp_unit: $('#setTempUnit').value,
       currency: $('#setCurrency').value,
       slicer_watch: $('#setSlicerWatch').checked ? '1' : '0',
@@ -1497,6 +1666,7 @@ function wire() {
     });
     if (failed(r)) return;
     await reload();
+    applyTheme();
     toast(t('toast.prefsSaved'));
   };
   $('#saveDry').onclick = async () => {
@@ -1564,6 +1734,7 @@ async function boot() {
   const d = await call('bootstrap');
   if (failed(d) || !d) return;
   absorb(d);
+  applyTheme();
   applyI18n();
   setView('dashboard');
 

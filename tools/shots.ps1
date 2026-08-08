@@ -10,8 +10,9 @@ param([string]$OutDir = "docs")
 Set-Location (Split-Path $PSScriptRoot -Parent)
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 
-py -c "from core import Store; Store('data/filaments.db').set_settings({'lang':'en','slicer_watch':'0','slicer_dir':'','currency':'EUR'})"
+py -c "from core import Store; Store('data/filaments.db').set_settings({'lang':'en','slicer_watch':'0','slicer_dir':'','currency':'EUR','theme':'dark','ams_units':'1'})"
 py tools\make_demo_slice.py data\_demo_slices
+py tools\make_demo_ams.py data\filaments.db
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
@@ -34,6 +35,9 @@ $steps = @(
   @{ name = "history";   js = "setView('history');" },
   @{ name = "stats";     js = "setView('stats');" },
   @{ name = "detail";    js = "setView('inventory'); setTimeout(() => openDetail(S.filaments.find((f) => f.name === 'PETG - black')), 900);" },
+  @{ name = "ams";       js = "setView('ams');" },
+  @{ name = "help";      js = "setView('help');" },
+  @{ name = "light";     js = "applyTheme('light'); setView('inventory');" },
   @{ name = "slice";     js = "setView('dashboard');"; db = $WATCH },
   @{ name = "sliceform"; js = "setView('dashboard'); setTimeout(() => document.getElementById('sliceAdd').click(), 6000);"; db = $WATCH }
 )

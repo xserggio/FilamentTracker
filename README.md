@@ -54,6 +54,10 @@ needs drying more often than PLA.
 - **Statistics.** Grams per month, most used filaments, split by material, hungriest
   projects and wasted material.
 - **Excel import.** Bring across an existing spreadsheet in one go.
+- **AMS tab.** Which spool is in which slot right now, external holder included.
+- **Light and dark.** Dark by default; light is designed on its own rather than
+  inverted, and either can follow Windows.
+- **Help inside the app.** The short version of this manual, a click away.
 - **Six languages.** English, Spanish, French, German, Portuguese and Italian.
 
 ## Download
@@ -184,6 +188,19 @@ there, as long as nothing has been printed from the fitted roll: that spool goes
 back in the drawer with its brand, weight and price intact. Once you have printed
 from it the tick disappears, because the roll is the window those grams are
 counted in and removing it would lose them.
+
+### AMS
+
+<img src="docs/ams.png" alt="AMS">
+
+Which spool is in which slot right now. The app cannot ask the printer, so this
+one is kept by hand — one click on a slot to load or empty it. Every slot is
+drawn whether or not it holds something, because knowing a slot is free is as
+useful as knowing what is in it, and the external spool holder is always there.
+
+Units are set from the tab itself, none to four, four slots each. A spool can
+only be in one place, so loading it somewhere else takes it out of wherever it
+was, and the picker tells you where each one already is.
 
 ### Logging a print
 
@@ -356,6 +373,20 @@ anywhere. To back it up, copy that file. To inspect it, any SQLite browser will 
 
 ---
 
+### Help, and how it looks
+
+**Help** carries the short version of this manual inside the app: the model in a
+paragraph, what each control on a card does, drying, weighing, Bambu Studio, the
+AMS tab and where the data lives.
+
+**Settings → Appearance** switches between dark, light, or whatever Windows is
+set to. Dark is the default. Light is not the dark theme inverted — the greys
+keep a warm cast so a filament of any hue sits on them without a colour cast,
+the semantic colours darken to stay legible on white, and elevation comes from a
+shadow rather than a lighter surface.
+
+<img src="docs/light.png" alt="The light theme">
+
 ## For developers
 
 ### Running from source
@@ -396,7 +427,7 @@ slicer.py      reads the plates Bambu Studio has sliced
 build.ps1      PyInstaller packaging
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo in navy, black and white (svg, png, ico)
-tools/         catalogue builder, demo database and demo slice, screenshots
+tools/         catalogue builder, demo data, demo slice, demo AMS, screenshots
 data/          your database (not in the repo)
 ```
 

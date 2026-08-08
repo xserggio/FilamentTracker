@@ -94,6 +94,18 @@ CREATE TABLE IF NOT EXISTS settings (
     value         TEXT NOT NULL
 );
 
+-- Which spool is in which AMS slot right now. A slot is identified by its
+-- unit and position rather than by a row id, so the layout can grow or shrink
+-- with the printer without renumbering anything. An empty slot is simply a row
+-- that is not here.
+CREATE TABLE IF NOT EXISTS ams_slots (
+    unit          INTEGER NOT NULL,
+    slot          INTEGER NOT NULL,
+    filament_id   INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
+    loaded_at     TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (unit, slot)
+);
+
 -- What the slicer wrote -> which spool it actually was. The colour in a sliced
 -- file is whatever was picked on screen or inherited from the AMS slot, so it
 -- rarely matches the real spool. Rather than guess forever, every confirmation
@@ -112,10 +124,12 @@ DEFAULT_SETTINGS = {
     "default_spool_g": "1000",     # default weight of a new roll
     "warn_no_stock": "1",          # warn when a roll runs low with no spare
     "lang": "",                    # interface language ("" = detect from the OS)
+    "theme": "dark",               # dark | light | auto (follow the system)
     "currency": "EUR",             # what prices are entered in; never converted
     "slicer_watch": "1",           # offer a print when Bambu Studio slices one
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)
     "slicer_dir": "",              # folder to watch ("" = find it)
+    "ams_units": "1",              # AMS units on the printer (0 = external spool only)
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
@@ -966,6 +980,50 @@ class Store:
             for r in rows
         ]
 
+    # ---------- what is loaded in the AMS ----------
+
+    AMS_SLOTS_PER_UNIT = 4
+    EXTERNAL = 0          # the spool holder on the side: always there, never in a unit
+
+    def ams(self) -> list:
+        """Every slot the printer has, in order, with whatever is in it.
+
+        The external spool holder is unit 0 and always present -- it exists with
+        or without an AMS, and plenty of prints come off it.
+        """
+        try:
+            units = max(0, min(4, int(self.get_settings().get("ams_units", 1))))
+        except ValueError:
+            units = 1
+
+        loaded = {(r["unit"], r["slot"]): r["filament_id"]
+                  for r in self.db.execute("SELECT unit, slot, filament_id FROM ams_slots")}
+        by_id = {f["id"]: f for f in self.filaments()}
+
+        out = []
+        for unit in range(1, units + 1):
+            for slot in range(1, self.AMS_SLOTS_PER_UNIT + 1):
+                out.append({"unit": unit, "slot": slot, "external": False,
+                            "filament": by_id.get(loaded.get((unit, slot)))})
+        out.append({"unit": self.EXTERNAL, "slot": 1, "external": True,
+                    "filament": by_id.get(loaded.get((self.EXTERNAL, 1)))})
+        return out
+
+    def set_ams_slot(self, unit: int, slot: int, filament_id=None):
+        """Put a spool in a slot, or empty it.
+
+        A spool can only be in one slot: loading it somewhere else takes it out
+        of wherever it was, because that is what happened in the real world.
+        """
+        unit, slot = int(unit), int(slot)
+        self.db.execute("DELETE FROM ams_slots WHERE unit=? AND slot=?", (unit, slot))
+        if filament_id:
+            self.db.execute("DELETE FROM ams_slots WHERE filament_id=?", (int(filament_id),))
+            self.db.execute(
+                "INSERT INTO ams_slots(unit, slot, filament_id, loaded_at) VALUES(?,?,?,?)",
+                (unit, slot, int(filament_id), today()))
+        self.db.commit()
+
     # ---------- what the slicer said -> which spool it was ----------
 
     def remember_match(self, signature: str, fid: int):
@@ -1234,6 +1292,21 @@ class Store:
                 "GROUP BY m ORDER BY m"
             )
         ]
+        # What each month was actually made of. The monthly chart is the one
+        # place the whole palette shows up at once, and the colours are not a
+        # decoration: they are the filaments that were spent.
+        splits = {}
+        for r in db.execute(
+            "SELECT substr(p.date,1,7) m, f.name, f.hex, COALESCE(SUM(pi.grams),0) g "
+            "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+            "JOIN filaments f ON f.id = pi.filament_id "
+            "GROUP BY m, f.id ORDER BY m, g DESC"
+        ):
+            splits.setdefault(r["m"], []).append(
+                {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
+        for entry in by_month:
+            entry["split"] = splits.get(entry["month"], [])
+
         by_filament = [
             {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2), "prints": r["n"]}
             for r in db.execute(
@@ -1242,16 +1315,42 @@ class Store:
                 "GROUP BY f.id ORDER BY g DESC"
             )
         ]
+        # Every bar in Statistics is made of the filaments that made it, so each
+        # one carries the split it is built from -- the same idea as the monthly
+        # chart, and the reason none of them needs an invented colour.
+        def split_by(key_sql, group_sql):
+            out = {}
+            for r in db.execute(
+                "SELECT %s k, f.name, f.hex, COALESCE(SUM(pi.grams),0) g "
+                "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+                "JOIN filaments f ON f.id = pi.filament_id "
+                "GROUP BY %s ORDER BY g DESC" % (key_sql, group_sql)
+            ):
+                out.setdefault(r["k"], []).append(
+                    {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
+            return out
+
+        mat_split = split_by("f.material", "f.material, f.id")
+        mat_prints = {r["m"]: r["n"] for r in db.execute(
+            "SELECT f.material m, COUNT(DISTINCT pi.print_id) n FROM print_items pi "
+            "JOIN filaments f ON f.id = pi.filament_id GROUP BY f.material")}
         by_material = [
-            {"material": r["material"], "grams": round(r["g"], 2)}
+            {"material": r["material"], "grams": round(r["g"], 2),
+             "prints": mat_prints.get(r["material"], 0),
+             "split": mat_split.get(r["material"], [])}
             for r in db.execute(
                 "SELECT f.material, COALESCE(SUM(pi.grams),0) g "
                 "FROM print_items pi JOIN filaments f ON f.id = pi.filament_id "
                 "GROUP BY f.material ORDER BY g DESC"
             )
         ]
+        proj_split = split_by("p.project", "p.project, f.id")
+        proj_prints = {r["project"]: r["n"] for r in db.execute(
+            "SELECT project, COUNT(*) n FROM prints GROUP BY project")}
         top_projects = [
-            {"project": r["project"], "grams": round(r["g"], 2)}
+            {"project": r["project"], "grams": round(r["g"], 2),
+             "prints": proj_prints.get(r["project"], 0),
+             "split": proj_split.get(r["project"], [])}
             for r in db.execute(
                 "SELECT p.project, COALESCE(SUM(pi.grams),0) g FROM prints p "
                 "JOIN print_items pi ON pi.print_id = p.id "
