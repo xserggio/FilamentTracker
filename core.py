@@ -130,6 +130,7 @@ DEFAULT_SETTINGS = {
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)
     "slicer_dir": "",              # folder to watch ("" = find it)
     "ams_units": "1",              # AMS units on the printer (0 = external spool only)
+    "alert_mutes": "{}",           # alerts silenced until their situation clears
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
@@ -162,6 +163,10 @@ DRY_DAYS = {
     "PVA": 5, "BVOH": 5, "Support": 30,
 }
 DRY_FALLBACK = 45
+
+# How far the books may drift from the shelf before it is worth saying anything.
+MISMATCH_MIN_G = 30.0
+MISMATCH_PCT = 0.03
 
 
 def dry_limit_for(material: str, table: dict) -> int:
@@ -503,8 +508,20 @@ class Store:
                     (r["id"], opened),
                 ).fetchone()["g"]
 
-            remaining = 0.0 if sealed else max(0.0, weight - used + adjust)
+            # What the ledger says, before clamping. Throwing the negative away
+            # is what let the app show "empty" for a spool with plastic still on
+            # it: the overshoot is the size of the disagreement between the books
+            # and the shelf, and it is the only way to say how far off they are.
+            ledger = 0.0 if sealed else weight - used + adjust
+            remaining = 0.0 if sealed else max(0.0, ledger)
+            over = 0.0 if sealed else max(0.0, -ledger)
             pct = 0.0 if sealed or not weight else (remaining / weight * 100)
+            # Spools carry more than their nominal weight -- a "1 kg" spool is
+            # often 1000-1030 g net -- and the empty-spool weight is an estimate
+            # per brand. Overshooting by a little is normal and not worth
+            # mentioning; this is the line past which it is worth a word.
+            slack = max(MISMATCH_MIN_G, weight * MISMATCH_PCT)
+            mismatch = over > slack
             total_used = self.db.execute(
                 "SELECT COALESCE(SUM(grams),0) g FROM print_items WHERE filament_id=?",
                 (r["id"],),
@@ -562,6 +579,8 @@ class Store:
                     "used": round(used, 2),
                     "adjust": round(adjust, 2),
                     "remaining": round(remaining, 2),
+                    "over": round(over, 2),
+                    "mismatch": mismatch,
                     "pct": round(pct, 1),
                     "sealed": sealed,
                     # A roll nothing has been printed from, on a filament that

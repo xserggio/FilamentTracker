@@ -310,6 +310,28 @@ function renderKpis(el, defs) {
   $$('[data-k]', el).forEach((n) => { n.onclick = defs[+n.dataset.k].action; });
 }
 
+/* Silenced alerts live in the settings rather than a table: it is a handful of
+   keys that come and go, and it means the list travels with the database. */
+function readMutes() {
+  try { return JSON.parse(S.settings.alert_mutes || '{}'); } catch (e) { return {}; }
+}
+function saveMutes(m) {
+  S.settings.alert_mutes = JSON.stringify(m);
+  call('save_settings', { alert_mutes: S.settings.alert_mutes });
+}
+function muteAlert(key) {
+  const m = readMutes();
+  m[key] = todayISO();
+  saveMutes(m);
+  renderDashboard();
+  toast(t('toast.alertMuted'));
+}
+function unmuteAll() {
+  saveMutes({});
+  renderDashboard();
+  toast(t('toast.alertsBack'));
+}
+
 /* ---------- jumps with filters already applied ---------- */
 function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name', material = '' } = {}) {
   S.inv = { search: '', material, sort, lowOnly, stockOnly, archived: false };
@@ -349,16 +371,25 @@ function renderDashboard() {
       action: () => gotoInventory({ lowOnly: true, sort: 'pct' }) },
   ]);
 
-  const alerts = [];
+  let alerts = [];
+  // A roll whose ledger has gone negative is not empty -- there is plastic on
+  // the spool and the books are wrong. Saying "empty" there is the app telling
+  // you something you can see is false, which is the fastest way to lose the
+  // reader's trust in everything else it says.
   lows.forEach((f) => alerts.push({
-    color: f.empty ? 'var(--danger)' : 'var(--warn)', title: f.name, id: f.id,
-    sub: f.empty
-      ? (f.stock > 0 ? t('alert.emptyStock', { n: f.stock }) : t('alert.emptyNoStock'))
-      : (f.stock > 0 ? t('alert.lowStock', { n: f.stock }) : t('alert.lowNoStock')),
-    val: g(f.remaining) + ' g',
+    key: f.mismatch ? `mismatch:${f.id}` : `low:${f.id}`,
+    color: f.mismatch ? 'var(--warn)' : (f.empty ? 'var(--danger)' : 'var(--warn)'),
+    title: f.name, id: f.id,
+    sub: f.mismatch ? t('alert.mismatch', { n: g(f.over) })
+      : f.empty
+        ? (f.stock > 0 ? t('alert.emptyStock', { n: f.stock }) : t('alert.emptyNoStock'))
+        : (f.stock > 0 ? t('alert.lowStock', { n: f.stock }) : t('alert.lowNoStock')),
+    val: f.mismatch ? `+${g(f.over)} g` : g(f.remaining) + ' g',
+    weigh: f.mismatch,
   }));
   active.filter((f) => f.needs_dry).forEach((f) => alerts.push({
-    color: '#5cc8e8', title: f.name, id: f.id,
+    key: `dry:${f.id}`,
+    color: 'var(--info-text)', title: f.name, id: f.id,
     sub: t('alert.dry', {
       n: f.days_since_dry, limit: f.dry_limit, mat: f.material,
       since: f.dried_at ? t('alert.dry.sinceDried') : t('alert.dry.sinceOpen'),
@@ -366,18 +397,52 @@ function renderDashboard() {
     val: f.days_since_dry + ' d',
   }));
   active.filter((f) => !f.low && !f.empty && f.stock === 0 && f.pct < 45).forEach((f) => alerts.push({
-    color: 'var(--accent)', title: f.name, sub: t('alert.noSpare'),
+    key: `nospare:${f.id}`,
+    color: 'var(--muted)', title: f.name, sub: t('alert.noSpare'),
     val: g(f.remaining) + ' g', id: f.id,
   }));
 
-  $('#alertCount').textContent = alerts.length;
-  $('#alerts').innerHTML = alerts.length ? alerts.map((a) => `
-    <div class="alert" data-fil="${a.id}">
+  // An alert you have read and cannot act on today is noise for as long as it
+  // takes you to buy more filament, and noise you cannot switch off teaches you
+  // to ignore the panel. Silencing one keeps it out of the way until its
+  // situation clears -- fit a new roll, dry the spool, weigh it -- and then it
+  // is allowed to be news again. Nothing is silenced forever, because nothing
+  // stays true forever.
+  const muted = readMutes();
+  const live = new Set(alerts.map((a) => a.key));
+  const stale = Object.keys(muted).filter((k) => !live.has(k));
+  if (stale.length) {
+    stale.forEach((k) => delete muted[k]);
+    saveMutes(muted);
+  }
+  const shown = alerts.filter((a) => !muted[a.key]);
+  const hidden = alerts.length - shown.length;
+
+  $('#alertCount').textContent = shown.length;
+  $('#alertMuted').hidden = !hidden;
+  $('#alertMuted').textContent = t('alert.muted', { n: hidden });
+  alerts = shown;
+  $('#alerts').innerHTML = alerts.length ? alerts.map((a, i) => `
+    <div class="alert" data-fil="${a.id}" data-alert="${i}">
       <span class="dot" style="background:${a.color}"></span>
       <span class="txt"><b>${esc(a.title)}</b><small>${esc(a.sub)}</small></span>
       <span class="val">${esc(a.val)}</span>
+      ${a.weigh ? `<button class="icon-btn sm" data-weigh="${a.id}"
+        title="${esc(t('roll.mode.adjust'))}">${svg('scale')}</button>` : ''}
+      <button class="icon-btn sm" data-mute="${i}"
+              title="${esc(t('alert.mute'))}">${svg('close')}</button>
     </div>`).join('')
     : `<div class="empty"><b>${esc(t('dash.noAlerts'))}</b>${esc(t('dash.noAlertsSub'))}</div>`;
+  $$('#alerts [data-weigh]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const f = S.filaments.find((x) => x.id == b.dataset.weigh);
+      if (f) openRoll(f, 'adjust');
+    };
+  });
+  $$('#alerts [data-mute]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); muteAlert(alerts[+b.dataset.mute].key); };
+  });
   $$('#alerts .alert').forEach((el) => {
     el.onclick = () => {
       const f = S.filaments.find((x) => x.id == el.dataset.fil);
@@ -424,6 +489,10 @@ const spareBrands = (f) => [...new Set((f.spares || []).map((s) => s.brand).filt
 // The spares tag only shows when it adds something, and names the brand when it
 // differs from the fitted roll's.
 function stockTag(f) {
+  // the books disagreeing with the shelf outranks anything else the chip says
+  if (f.mismatch) {
+    return `<span class="tag warn-tag">${esc(t('inv.mismatchTag'))}</span>`;
+  }
   // nothing is fitted, so the stock is the whole story and says so plainly
   if (f.sealed) {
     return `<span class="tag sealed">${esc(t('inv.sealed'))}</span>`;
@@ -490,6 +559,7 @@ function renderInventory() {
           <span class="p" style="color:${col}">${f.pct.toFixed(0)}%</span>
         </div>
         <div class="bar"><i style="width:${Math.min(100, f.pct)}%;background:${col}"></i></div>
+        ${f.mismatch ? `<div class="mismatch">${esc(t('inv.mismatch', { n: g(f.over) }))}</div>` : ''}
       </div>`}
 
       <div class="fcard-foot">
@@ -1546,6 +1616,8 @@ function hide(sel) { $(sel).hidden = true; }
 function wire() {
   $$('.nav-item').forEach((b) => { b.onclick = () => setView(b.dataset.view); });
   $$('[data-goto]').forEach((b) => { b.onclick = () => setView(b.dataset.goto); });
+  $('#alertMuted').onclick = unmuteAll;
+
   $('#ctaNewPrint').onclick = () => openPrint(null);
 
   $('#btnPickSlicerDir').onclick = async () => {

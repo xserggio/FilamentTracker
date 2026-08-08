@@ -855,3 +855,14 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .help-more{color:var(--muted-2);font-size:var(--t-sm)}
 .help-more a{color:var(--accent-text);cursor:pointer;text-decoration:underline;
   text-underline-offset:2px}
+
+/* the books disagreeing with the shelf: stated, not hidden behind "empty" */
+.mismatch{font-size:var(--t-xs);color:var(--warn-text);margin-top:-2px}
+.tag.warn-tag{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn-text)}
+
+.alert-head{display:flex;align-items:center;gap:10px}
+.muted-link{font-size:var(--t-sm);color:var(--muted-2);cursor:pointer;text-decoration:underline;
+  text-underline-offset:2px}
+.muted-link:hover{color:var(--text)}
+.alert .icon-btn.sm{opacity:0;transition:opacity .12s}
+.alert:hover .icon-btn.sm{opacity:1}
