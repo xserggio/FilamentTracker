@@ -409,6 +409,10 @@ const spareBrands = (f) => [...new Set((f.spares || []).map((s) => s.brand).filt
 // The spares tag only shows when it adds something, and names the brand when it
 // differs from the fitted roll's.
 function stockTag(f) {
+  // nothing is fitted, so the stock is the whole story and says so plainly
+  if (f.sealed) {
+    return `<span class="tag sealed">${esc(t('inv.sealed'))}</span>`;
+  }
   if (f.stock > 0) {
     const b = spareBrands(f);
     let extra = '';
@@ -460,29 +464,37 @@ function renderInventory() {
         <button class="icon-btn" data-edit="${f.id}" title="${esc(t('inv.edit'))}">${svg('pencil')}</button>
       </div>
 
+      ${f.sealed ? `
+      <div class="sealed-line">
+        <span class="g">${g(f.spare_g)}<small> g</small></span>
+        <span class="lbl">${esc(t('inv.sealedStock', { n: f.stock }))}</span>
+      </div>` : `
       <div class="gauge">
         <div class="gauge-nums">
           <span class="g">${g(f.remaining)}<small> / ${g(f.roll_weight)} g</small></span>
           <span class="p" style="color:${col}">${f.pct.toFixed(0)}%</span>
         </div>
         <div class="bar"><i style="width:${Math.min(100, f.pct)}%;background:${col}"></i></div>
-      </div>
+      </div>`}
 
       <div class="fcard-foot">
-        <span class="used" title="${esc(t('inv.openedTitle', {
+        <span class="used" title="${esc(f.sealed ? t('fil.sealedHint') : t('inv.openedTitle', {
           d: fdate(f.roll_opened), used: kg(f.total_used) }))}">${
-          f.days_open != null ? `${f.days_open} d` : fdate(f.roll_opened)}</span>
+          f.sealed ? esc(t('inv.sealed'))
+            : (f.days_open != null ? `${f.days_open} d` : fdate(f.roll_opened))}</span>
         <div class="stepper">
           <button data-stock="${f.id}" data-delta="-1" title="${esc(t('inv.spareRemove'))}">−</button>
           <button class="count ${spareBrands(f).length > 1 ? 'mixed' : ''}"
                   data-spares="${f.id}" title="${esc(t('inv.spareOpen'))}">${f.stock}</button>
           <button data-stock="${f.id}" data-delta="1" title="${esc(t('inv.spareAdd'))}">+</button>
         </div>
+        ${f.sealed ? '' : `
         <button class="icon-btn sm" data-adjust="${f.id}"
                 title="${esc(t('roll.mode.adjust'))}">${svg('scale')}</button>
         <button class="icon-btn sm" data-dry="${f.id}"
-                title="${esc(t('roll.mode.dry'))}">${svg('drop')}</button>
-        <button class="btn sm" data-roll="${f.id}">${esc(t('inv.newRoll'))}</button>
+                title="${esc(t('roll.mode.dry'))}">${svg('drop')}</button>`}
+        <button class="btn sm" data-roll="${f.id}">${
+          esc(t(f.sealed ? 'inv.openRoll' : 'inv.newRoll'))}</button>
       </div>
     </div>`;
   }).join('')
@@ -1074,6 +1086,15 @@ async function savePrint() {
   toast(S.editingPrint ? t('toast.printUpdated') : t('toast.printSaved'));
 }
 
+/* A sealed spool has no opening date, so the field goes rather than sitting
+   there with today's date in it -- which is what made the app look like it was
+   insisting the spool had been opened. */
+function sealedToggled() {
+  const on = $('#fSealed').checked;
+  $('#fOpenedField').hidden = on;
+  if (on && Number($('#fStock').value) < 1) $('#fStock').value = 1;
+}
+
 /* ---------- MODAL: filament ---------- */
 function openFilament(f) {
   S.editingFilament = f ? f.id : null;
@@ -1087,6 +1108,11 @@ function openFilament(f) {
   $('#fPrice').value = f && f.price ? f.price : '';
   $('#fWeight').value = f ? f.roll_weight : (S.settings.default_spool_g || 1000);
   $('#fOpened').value = f ? (f.roll_opened || todayISO()) : todayISO();
+  // only offered when creating: turning an open roll back into a sealed one
+  // would mean throwing away its history
+  $('#fSealedRow').hidden = !!f;
+  $('#fSealed').checked = false;
+  sealedToggled();
   $('#fNotes').value = f ? f.notes : '';
   $('#fArchived').checked = f ? !!f.archived : false;
   setHex(f ? f.hex : '#8a8f96');
@@ -1135,13 +1161,16 @@ async function saveFilament() {
     archived: $('#fArchived').checked ? 1 : 0,
     roll_weight: Number($('#fWeight').value) || 1000,
     roll_opened: $('#fOpened').value || todayISO(),
+    sealed: !S.editingFilament && $('#fSealed').checked ? 1 : 0,
   };
+  if (data.sealed) data.stock = Math.max(1, data.stock);
   if (!data.name && !data.color) return toast(t('toast.needColor'), 'error');
   const res = await call('save_filament', data);
   if (failed(res)) return;
   hide('#filModal');
   await reload();
-  toast(S.editingFilament ? t('toast.filUpdated') : t('toast.filSaved'));
+  toast(S.editingFilament ? t('toast.filUpdated')
+    : (data.sealed ? t('toast.filSealed') : t('toast.filSaved')));
 }
 
 /* ---------- MODAL: roll ---------- */
@@ -1151,12 +1180,14 @@ function openRoll(f, mode = 'new') {
   S.rollTarget = f;
   $('#rollModalTitle').textContent = t('roll.title', { name: f.name });
   $('#rollBody').innerHTML = `
-    <div class="info-box">${t('roll.info', {
-      brand: f.roll_brand ? t('roll.infoBrand', { brand: `<b>${esc(f.roll_brand)}</b>` }) : '',
-      date: `<b>${fdate(f.roll_opened)}</b>`,
-      rem: `<b>${g(f.remaining)} g</b>`, total: `${g(f.roll_weight)} g`,
-      stock: `<b>${f.stock}</b>`,
-    })}</div>
+    <div class="info-box">${f.sealed
+      ? t('roll.infoSealed', { stock: `<b>${f.stock}</b>` })
+      : t('roll.info', {
+          brand: f.roll_brand ? t('roll.infoBrand', { brand: `<b>${esc(f.roll_brand)}</b>` }) : '',
+          date: `<b>${fdate(f.roll_opened)}</b>`,
+          rem: `<b>${g(f.remaining)} g</b>`, total: `${g(f.roll_weight)} g`,
+          stock: `<b>${f.stock}</b>`,
+        })}</div>
     <div class="field"><span>${esc(t('roll.what'))}</span>
       <select id="rMode">
         <option value="new">${esc(t('roll.mode.new'))}</option>
@@ -1186,7 +1217,11 @@ function openRoll(f, mode = 'new') {
       <label class="field"><span>${esc(t('roll.useSpare'))}</span>
         <select id="rSpare">
           <option value="">${esc(t('roll.noSpare'))}</option>
-          ${(f.spares || []).map((s) => `<option value="${s.id}">${
+          ${(f.spares || []).map((s, i) => `<option value="${s.id}"${
+            // Opening the first spool of a sealed filament takes it out of the
+            // stock: otherwise two spools in the drawer become an open roll plus
+            // two spares, which is one spool more than you own.
+            f.sealed && i === 0 ? ' selected' : ''}>${
             esc(s.brand || t('roll.noBrand'))} · ${g(s.weight)} g</option>`).join('')}
         </select>
         <small>${esc(f.stock ? t('roll.spareHelp') : t('roll.spareNone'))}</small>
@@ -1381,6 +1416,8 @@ function wire() {
     $('#hisFrom').value = ''; $('#hisTo').value = ''; $('#hisFailed').checked = false;
     renderHistory();
   };
+
+  $('#fSealed').onchange = sealedToggled;
 
   $('#pAddItem').onclick = () => addItemRow();
   $('#pSave').onclick = savePrint;

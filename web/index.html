@@ -401,10 +401,15 @@
           <input type="number" id="fPrice" min="0" step="0.01" placeholder="0">
           <small data-i18n="fil.priceHelp"></small></label>
       </div>
+      <!-- A spool you own but have not opened has no fitted roll and no opening
+           date, so the date field goes away rather than inventing one. -->
+      <label class="toggle" id="fSealedRow"><input type="checkbox" id="fSealed">
+        <span><span data-i18n="fil.sealed">Still sealed</span>
+          <i class="hint" data-i18n="fil.sealedHint"></i></span></label>
       <div class="form-grid">
         <label class="field"><span data-i18n="fil.weight">Current spool weight (g)</span>
           <input type="number" id="fWeight" min="1" step="10"></label>
-        <label class="field"><span data-i18n="fil.opened">Spool opened on</span>
+        <label class="field" id="fOpenedField"><span data-i18n="fil.opened">Spool opened on</span>
           <input type="date" id="fOpened"></label>
       </div>
       <label class="field"><span><span data-i18n="fil.notes">Notes</span> <i data-i18n="common.optional"></i></span>
