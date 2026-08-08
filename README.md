@@ -55,8 +55,7 @@ needs drying more often than PLA.
   projects and wasted material.
 - **Excel import.** Bring across an existing spreadsheet in one go.
 - **AMS tab.** Which spool is in which slot right now, external holder included.
-- **Light and dark.** Dark by default; light is designed on its own rather than
-  inverted, and either can follow Windows.
+- **Light and dark.** Dark by default, and either can follow Windows.
 - **Help inside the app.** The short version of this manual, a click away.
 - **Six languages.** English, Spanish, French, German, Portuguese and Italian.
 
@@ -65,12 +64,10 @@ needs drying more often than PLA.
 **1.** Download **`FilamentTracker.exe`** from the
 [latest release](../../releases/latest).
 
-**2.** Put it wherever you like — Desktop, Documents, a USB stick.
+**2.** Double-click it wherever you put it.
 
-**3.** Double-click it. That's it.
-
-No installer, no Python, no command line. It is one file; the first time you run it
-a `data` folder appears next to it with your database inside.
+No installer, no Python, no command line. The first time you run it a `data` folder
+appears next to it with your database inside.
 
 <details>
 <summary><b>Windows says "Windows protected your PC"</b></summary>
@@ -104,11 +101,10 @@ the app starts empty.
 
 ### The model in one paragraph
 
-A **filament** is a material and colour you print with — `PLA - black`. At any time
-it has one **roll** fitted, with a weight, an opening date, a brand and a spool
-type. It may also have **spares** waiting in a drawer, each with their own brand,
-type and weight. A **print** records a date, a project and how many grams of each
-filament it used.
+The app holds three things: **filaments**, each with one **roll** fitted and
+whatever **spares** you have in the drawer, and **prints** that spend grams of a
+filament. Every roll and every spare carries its own brand, spool type, weight and
+price, so one filament can move between manufacturers without changing its name.
 
 Remaining grams on the fitted roll are:
 
@@ -161,8 +157,8 @@ The lookup goes from specific to general and says which it used:
 | the brand | the brand's own range for that material |
 | typical | the usual range for the plastic, whoever made it |
 
-So a spool whose brand you never filled in still shows something useful, and it
-says so rather than pretending to know. Settings has a **°C / °F** switch; the
+A spool with no brand falls back to the typical range for its plastic, and the
+sheet says which of the three it is using. Settings has a **°C / °F** switch; the
 data is always stored in Celsius.
 
 The brand's real colours are offered in the colour picker too, so *Bambu Lab ·
@@ -379,11 +375,8 @@ anywhere. To back it up, copy that file. To inspect it, any SQLite browser will 
 paragraph, what each control on a card does, drying, weighing, Bambu Studio, the
 AMS tab and where the data lives.
 
-**Settings → Appearance** switches between dark, light, or whatever Windows is
-set to. Dark is the default. Light is not the dark theme inverted — the greys
-keep a warm cast so a filament of any hue sits on them without a colour cast,
-the semantic colours darken to stay legible on white, and elevation comes from a
-shadow rather than a lighter surface.
+**Settings → Appearance** switches between dark, light, or whatever Windows is set
+to, without restarting. Dark is the default.
 
 <img src="docs/light.png" alt="The light theme">
 
