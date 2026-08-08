@@ -186,10 +186,13 @@ function setView(v) {
 
 /* ---------- main render ---------- */
 function renderAll() {
-  const low = S.filaments.filter((f) => !f.archived && (f.low || f.empty)).length;
-  const badge = $('#navLow');
-  badge.hidden = low === 0;
-  badge.textContent = low;
+  // the dot means "there is something on the panel", so it counts what is on
+  // the panel: silencing an alert takes it off the badge too
+  const muted = readMutes();
+  const pending = buildAlerts().filter((a) => !muted[a.key]).length;
+  const badge = $('#navAlerts');
+  badge.hidden = pending === 0;
+  badge.textContent = pending;
 
   if (S.view === 'dashboard') renderDashboard();
   if (S.view === 'inventory') renderInventory();
@@ -310,6 +313,46 @@ function renderKpis(el, defs) {
   $$('[data-k]', el).forEach((n) => { n.onclick = defs[+n.dataset.k].action; });
 }
 
+/* Built in one place so the badge counts exactly what the list shows, rather
+   than its own approximation of it. That drift is what put a red dot on
+   Inventory while the alerts -- and the only way to silence them -- were on the
+   dashboard. */
+function buildAlerts() {
+  const active = S.filaments.filter((f) => !f.archived);
+  const lows = active.filter((f) => f.low || f.empty);
+  const alerts = [];
+    // A roll whose ledger has gone negative is not empty -- there is plastic on
+    // the spool and the books are wrong. Saying "empty" there is the app telling
+    // you something you can see is false, which is the fastest way to lose the
+    // reader's trust in everything else it says.
+    lows.forEach((f) => alerts.push({
+      key: f.mismatch ? `mismatch:${f.id}` : `low:${f.id}`,
+      color: f.mismatch ? 'var(--warn)' : (f.empty ? 'var(--danger)' : 'var(--warn)'),
+      title: f.name, id: f.id,
+      sub: f.mismatch ? t('alert.mismatch', { n: g(f.over) })
+        : f.empty
+          ? (f.stock > 0 ? t('alert.emptyStock', { n: f.stock }) : t('alert.emptyNoStock'))
+          : (f.stock > 0 ? t('alert.lowStock', { n: f.stock }) : t('alert.lowNoStock')),
+      val: f.mismatch ? `+${g(f.over)} g` : g(f.remaining) + ' g',
+      weigh: f.mismatch,
+    }));
+    active.filter((f) => f.needs_dry).forEach((f) => alerts.push({
+      key: `dry:${f.id}`,
+      color: 'var(--info-text)', title: f.name, id: f.id,
+      sub: t('alert.dry', {
+        n: f.days_since_dry, limit: f.dry_limit, mat: f.material,
+        since: f.dried_at ? t('alert.dry.sinceDried') : t('alert.dry.sinceOpen'),
+      }),
+      val: f.days_since_dry + ' d',
+    }));
+    active.filter((f) => !f.low && !f.empty && f.stock === 0 && f.pct < 45).forEach((f) => alerts.push({
+      key: `nospare:${f.id}`,
+      color: 'var(--muted)', title: f.name, sub: t('alert.noSpare'),
+      val: g(f.remaining) + ' g', id: f.id,
+    }));
+  return alerts;
+}
+
 /* Silenced alerts live in the settings rather than a table: it is a handful of
    keys that come and go, and it means the list travels with the database. */
 function readMutes() {
@@ -323,12 +366,14 @@ function muteAlert(key) {
   const m = readMutes();
   m[key] = todayISO();
   saveMutes(m);
-  renderDashboard();
+  // renderAll, not just the panel: the badge is drawn there and silencing one
+  // has to take it off the count as well
+  renderAll();
   toast(t('toast.alertMuted'));
 }
 function unmuteAll() {
   saveMutes({});
-  renderDashboard();
+  renderAll();
   toast(t('toast.alertsBack'));
 }
 
@@ -371,36 +416,7 @@ function renderDashboard() {
       action: () => gotoInventory({ lowOnly: true, sort: 'pct' }) },
   ]);
 
-  let alerts = [];
-  // A roll whose ledger has gone negative is not empty -- there is plastic on
-  // the spool and the books are wrong. Saying "empty" there is the app telling
-  // you something you can see is false, which is the fastest way to lose the
-  // reader's trust in everything else it says.
-  lows.forEach((f) => alerts.push({
-    key: f.mismatch ? `mismatch:${f.id}` : `low:${f.id}`,
-    color: f.mismatch ? 'var(--warn)' : (f.empty ? 'var(--danger)' : 'var(--warn)'),
-    title: f.name, id: f.id,
-    sub: f.mismatch ? t('alert.mismatch', { n: g(f.over) })
-      : f.empty
-        ? (f.stock > 0 ? t('alert.emptyStock', { n: f.stock }) : t('alert.emptyNoStock'))
-        : (f.stock > 0 ? t('alert.lowStock', { n: f.stock }) : t('alert.lowNoStock')),
-    val: f.mismatch ? `+${g(f.over)} g` : g(f.remaining) + ' g',
-    weigh: f.mismatch,
-  }));
-  active.filter((f) => f.needs_dry).forEach((f) => alerts.push({
-    key: `dry:${f.id}`,
-    color: 'var(--info-text)', title: f.name, id: f.id,
-    sub: t('alert.dry', {
-      n: f.days_since_dry, limit: f.dry_limit, mat: f.material,
-      since: f.dried_at ? t('alert.dry.sinceDried') : t('alert.dry.sinceOpen'),
-    }),
-    val: f.days_since_dry + ' d',
-  }));
-  active.filter((f) => !f.low && !f.empty && f.stock === 0 && f.pct < 45).forEach((f) => alerts.push({
-    key: `nospare:${f.id}`,
-    color: 'var(--muted)', title: f.name, sub: t('alert.noSpare'),
-    val: g(f.remaining) + ' g', id: f.id,
-  }));
+  let alerts = buildAlerts();
 
   // An alert you have read and cannot act on today is noise for as long as it
   // takes you to buy more filament, and noise you cannot switch off teaches you
