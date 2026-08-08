@@ -433,7 +433,11 @@ class Store:
             roll = self.current_roll(r["id"])
             dried = roll["dried_at"] if roll else ""
             roll_type = (roll["spool_type"] if roll else "plastic") or "plastic"
-            if roll is None:
+            # A filament can be owned without a spool ever having been fitted:
+            # bought, still sealed, waiting in the drawer. There is no roll to
+            # measure, so nothing is claimed about one -- the stock is what it has.
+            sealed = roll is None
+            if sealed:
                 weight, opened, adjust, roll_id = default_g, None, 0.0, None
                 roll_brand = r["brand"]
                 used = 0.0
@@ -450,8 +454,8 @@ class Store:
                     (r["id"], opened),
                 ).fetchone()["g"]
 
-            remaining = max(0.0, weight - used + adjust)
-            pct = (remaining / weight * 100) if weight else 0.0
+            remaining = 0.0 if sealed else max(0.0, weight - used + adjust)
+            pct = 0.0 if sealed or not weight else (remaining / weight * 100)
             total_used = self.db.execute(
                 "SELECT COALESCE(SUM(grams),0) g FROM print_items WHERE filament_id=?",
                 (r["id"],),
@@ -464,7 +468,8 @@ class Store:
             # been dried the clock runs from the opening date.
             dry_limit = int(dry_days.get(r["material"], DRY_FALLBACK))
             since_dry = days_since(dried or opened)
-            needs_dry = since_dry is not None and since_dry > dry_limit
+            # sealed plastic is dry: the clock starts when the bag is opened
+            needs_dry = not sealed and since_dry is not None and since_dry > dry_limit
 
             spares = [
                 {"id": s["id"], "brand": s["brand"], "weight": round(float(s["weight"]), 2),
@@ -509,8 +514,11 @@ class Store:
                     "adjust": round(adjust, 2),
                     "remaining": round(remaining, 2),
                     "pct": round(pct, 1),
-                    "low": pct < low_pct,
-                    "empty": remaining <= 0.5,
+                    "sealed": sealed,
+                    # unopened is not "empty": there is nothing wrong with it, so
+                    # it raises no alert and does not count towards low spools
+                    "low": not sealed and pct < low_pct,
+                    "empty": not sealed and remaining <= 0.5,
                     "total_used": round(total_used, 2),
                     "rolls_used": rolls_used,
                 }
@@ -546,13 +554,22 @@ class Store:
         opened = data.get("roll_opened") or today()
         stype = norm_type(data.get("spool_type"))
         price = float(data.get("price") or 0)
-        self.db.execute(
-            "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, "
-            "spool_type, price) VALUES(?,?,?,0,?,?,?,?)",
-            (fid, opened, weight, brand, "first roll", stype, price),
-        )
+        stock = int(data.get("stock") or 0)
+
+        # Bought but not opened yet: no roll is fitted, so none is recorded. The
+        # spools go straight to stock and one of them becomes the fitted roll the
+        # day it is opened, which is also the day the drying clock should start.
+        sealed = bool(data.get("sealed"))
+        if sealed:
+            stock = max(1, stock)
+        else:
+            self.db.execute(
+                "INSERT INTO rolls(filament_id, opened_at, weight, adjust, brand, note, "
+                "spool_type, price) VALUES(?,?,?,0,?,?,?,?)",
+                (fid, opened, weight, brand, "first roll", stype, price),
+            )
         self.db.commit()
-        for _ in range(int(data.get("stock") or 0)):
+        for _ in range(stock):
             self.add_spare(fid, brand=brand, weight=weight, spool_type=stype, price=price)
         return fid
 
