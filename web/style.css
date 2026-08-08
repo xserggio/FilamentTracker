@@ -794,3 +794,44 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .dr-used, .dr-days, .stepper .count, .slice-grams{
   font-variant-numeric:tabular-nums;
 }
+
+/* ============ AMS ============
+   A slot is a physical thing, so it is drawn as one: a fixed box that is either
+   holding a spool or visibly empty. An empty slot is not hidden -- knowing a
+   slot is free is as useful as knowing what is in it. */
+.ams-units{flex-direction:row;align-items:center;gap:9px}
+.ams-units > span{white-space:nowrap}
+.ams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.ams-slot{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  padding:14px;display:flex;flex-direction:column;gap:11px;cursor:pointer;min-height:132px;
+  transition:border-color .13s,background .13s;
+}
+.ams-slot:hover{border-color:var(--line-3);background:var(--hover)}
+.ams-slot.is-empty{border-style:dashed;background:transparent}
+.ams-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ams-id{
+  font-family:var(--label);font-size:var(--t-xs);font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted-2);
+}
+.ams-slot.is-ext .ams-id{color:var(--muted)}
+.ams-body{display:flex;align-items:center;gap:11px;flex:1}
+.ams-body .swatch{width:38px;height:38px}
+.ams-what{min-width:0;flex:1}
+.ams-what b{display:block;font-size:var(--t-md);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ams-what small{color:var(--muted-2);font-size:var(--t-xs)}
+.ams-free{color:var(--muted-2);font-size:var(--t-sm);display:flex;align-items:center;gap:8px}
+.ams-free svg{width:16px;height:16px;flex:none}
+
+.ams-pick{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto}
+.ams-opt{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;width:100%;text-align:left;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-2);
+  color:var(--text);cursor:pointer;font-size:var(--t-md);
+}
+.ams-opt:hover{border-color:var(--line-3);background:var(--surface-2)}
+.ams-opt .swatch{width:26px;height:26px;border-radius:var(--r-sm)}
+.ams-opt b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ams-opt small{color:var(--muted-2);font-variant-numeric:tabular-nums}
+.ams-opt.here{border-color:var(--accent-line);background:var(--accent-soft)}

@@ -94,6 +94,18 @@ CREATE TABLE IF NOT EXISTS settings (
     value         TEXT NOT NULL
 );
 
+-- Which spool is in which AMS slot right now. A slot is identified by its
+-- unit and position rather than by a row id, so the layout can grow or shrink
+-- with the printer without renumbering anything. An empty slot is simply a row
+-- that is not here.
+CREATE TABLE IF NOT EXISTS ams_slots (
+    unit          INTEGER NOT NULL,
+    slot          INTEGER NOT NULL,
+    filament_id   INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
+    loaded_at     TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (unit, slot)
+);
+
 -- What the slicer wrote -> which spool it actually was. The colour in a sliced
 -- file is whatever was picked on screen or inherited from the AMS slot, so it
 -- rarely matches the real spool. Rather than guess forever, every confirmation
@@ -117,6 +129,7 @@ DEFAULT_SETTINGS = {
     "slicer_watch": "1",           # offer a print when Bambu Studio slices one
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)
     "slicer_dir": "",              # folder to watch ("" = find it)
+    "ams_units": "1",              # AMS units on the printer (0 = external spool only)
 }
 
 # How long an open spool lasts before it is worth drying, by plastic family.
@@ -966,6 +979,50 @@ class Store:
              "grams": round(float(r["grams"]), 2)}
             for r in rows
         ]
+
+    # ---------- what is loaded in the AMS ----------
+
+    AMS_SLOTS_PER_UNIT = 4
+    EXTERNAL = 0          # the spool holder on the side: always there, never in a unit
+
+    def ams(self) -> list:
+        """Every slot the printer has, in order, with whatever is in it.
+
+        The external spool holder is unit 0 and always present -- it exists with
+        or without an AMS, and plenty of prints come off it.
+        """
+        try:
+            units = max(0, min(4, int(self.get_settings().get("ams_units", 1))))
+        except ValueError:
+            units = 1
+
+        loaded = {(r["unit"], r["slot"]): r["filament_id"]
+                  for r in self.db.execute("SELECT unit, slot, filament_id FROM ams_slots")}
+        by_id = {f["id"]: f for f in self.filaments()}
+
+        out = []
+        for unit in range(1, units + 1):
+            for slot in range(1, self.AMS_SLOTS_PER_UNIT + 1):
+                out.append({"unit": unit, "slot": slot, "external": False,
+                            "filament": by_id.get(loaded.get((unit, slot)))})
+        out.append({"unit": self.EXTERNAL, "slot": 1, "external": True,
+                    "filament": by_id.get(loaded.get((self.EXTERNAL, 1)))})
+        return out
+
+    def set_ams_slot(self, unit: int, slot: int, filament_id=None):
+        """Put a spool in a slot, or empty it.
+
+        A spool can only be in one slot: loading it somewhere else takes it out
+        of wherever it was, because that is what happened in the real world.
+        """
+        unit, slot = int(unit), int(slot)
+        self.db.execute("DELETE FROM ams_slots WHERE unit=? AND slot=?", (unit, slot))
+        if filament_id:
+            self.db.execute("DELETE FROM ams_slots WHERE filament_id=?", (int(filament_id),))
+            self.db.execute(
+                "INSERT INTO ams_slots(unit, slot, filament_id, loaded_at) VALUES(?,?,?,?)",
+                (unit, slot, int(filament_id), today()))
+        self.db.commit()
 
     # ---------- what the slicer said -> which spool it was ----------
 

@@ -32,6 +32,10 @@
         <span data-i18n="nav.inventory">Inventory</span>
         <em class="nav-badge" id="navLow" hidden>0</em>
       </button>
+      <button class="nav-item" data-view="ams">
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v12M13 6v12"/></svg>
+        <span data-i18n="nav.ams">AMS</span>
+      </button>
       <button class="nav-item" data-view="history">
         <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
         <span data-i18n="nav.history">History</span>
@@ -115,6 +119,24 @@
       </section>
 
       <!-- ============ HISTORY ============ -->
+      <!-- What is loaded right now. The app cannot ask the printer, so this is
+           kept by hand -- which is worth the trouble because "which spool is in
+           slot 3" is the question you have while standing in front of it. -->
+      <section class="view" id="view-ams" hidden>
+        <div class="toolbar">
+          <p class="muted small-note" data-i18n="ams.sub" style="flex:1"></p>
+          <label class="field ams-units">
+            <span data-i18n="ams.units">AMS units</span>
+            <select id="amsUnits" class="select">
+              <option value="0" data-i18n="ams.unitsNone">None, external spool only</option>
+              <option value="1">1</option><option value="2">2</option>
+              <option value="3">3</option><option value="4">4</option>
+            </select>
+          </label>
+        </div>
+        <div id="amsSlots" class="ams-grid"></div>
+      </section>
+
       <section class="view" id="view-history" hidden>
         <div class="toolbar">
           <div class="search">
@@ -480,6 +502,23 @@
       <div id="slicesList" class="slices"></div>
     </div>
     <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
+    </footer>
+  </div>
+</div>
+
+<div class="overlay" id="amsModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="amsTitle">Slot</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div id="amsPick" class="ams-pick"></div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn danger ghost" id="amsClear" data-i18n="ams.clear">Empty this slot</button>
+      <span class="spacer"></span>
       <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
     </footer>
   </div>
