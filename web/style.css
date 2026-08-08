@@ -633,3 +633,10 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .slice-what .slice-chips{margin-top:5px}
 .slice-grams{font-size:13.5px;font-weight:640;flex:none}
+
+/* a sealed filament has no gauge to show, so the space says what it does have */
+.sealed-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sealed-line .g{font-size:20px;font-weight:660;letter-spacing:-.6px}
+.sealed-line .g small{font-size:12.5px;font-weight:500;color:var(--muted-2);letter-spacing:0;margin-left:2px}
+.sealed-line .lbl{font-size:12.5px;color:var(--muted)}
+.tag.sealed{background:rgba(111,125,247,.1);border-color:rgba(111,125,247,.3);color:#9aa5fa}

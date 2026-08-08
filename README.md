@@ -31,6 +31,8 @@ needs drying more often than PLA.
 - **Live spool levels.** Every print you log is subtracted from the roll that is
   currently fitted. Open a new roll and the counter starts over without losing
   history.
+- **Spools you have not opened.** Stock is stock: a sealed spool records no
+  roll, no opening date and no drying clock until the day you open it.
 - **Spares with their own identity.** Stock is not a counter: each spare spool has
   its own brand, spool type and weight, so your black can be Bambu Lab while its
   two spares are eSUN.
@@ -162,6 +164,20 @@ data is always stored in Celsius.
 The brand's real colours are offered in the colour picker too, so *Bambu Lab ·
 PLA Matte* proposes the fifteen matte colours it actually sells instead of a
 blank swatch.
+
+### A spool you have not opened
+
+A filament you own but have not started is not a roll at 100 %: it is stock. Tick
+**Still sealed** when you add it and no roll is recorded at all — no opening date,
+no drying clock, no gauge. The card shows what is in the drawer and its only
+action is **Open a spool**.
+
+Opening one takes it out of the stock, so two sealed spools become one fitted
+roll and one spare rather than three spools. The drying clock starts that day,
+which is the day it actually starts.
+
+An unopened filament never raises an alert: it is not low and it is not empty,
+there is simply nothing fitted yet.
 
 ### Logging a print
 

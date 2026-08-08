@@ -31,6 +31,8 @@ secarlo bastante más a menudo que el PLA.
 - **Nivel de cada rollo, al día.** Cada impresión que registras se descuenta del
   rollo que está puesto. Al abrir uno nuevo el contador arranca de cero sin perder
   el historial.
+- **Rollos sin abrir.** El stock es stock: una bobina sin estrenar no registra
+  rollo, ni fecha de apertura, ni contador de secado hasta el día que la abres.
 - **Repuestos con identidad propia.** El stock no es un contador: cada repuesto
   tiene su marca, su tipo de bobina y su peso, así que tu negro puede ser Bambu Lab
   y sus dos repuestos eSUN.
@@ -164,6 +166,20 @@ se guardan siempre en Celsius.
 Los colores reales de la marca también aparecen en el selector de color: *Bambu
 Lab · PLA Matte* propone los quince mates que vende de verdad en lugar de una
 muestra en blanco.
+
+### Un rollo que no has abierto
+
+Un filamento que tienes pero no has estrenado no es un rollo al 100 %: es stock.
+Marca **Sin abrir** al darlo de alta y no se registra ningún rollo — ni fecha de
+apertura, ni contador de secado, ni barra de nivel. La tarjeta enseña lo que hay
+en el cajón y su única acción es **Abrir rollo**.
+
+Al abrir uno se descuenta del stock, así que dos bobinas sin abrir pasan a ser un
+rollo puesto y un repuesto, no tres bobinas. El contador de secado arranca ese
+día, que es cuando arranca de verdad.
+
+Un filamento sin abrir no genera ningún aviso: no está bajo ni vacío, es que
+todavía no hay nada puesto.
 
 ### Registrar una impresión
 
