@@ -181,6 +181,12 @@ día, que es cuando arranca de verdad.
 Un filamento sin abrir no genera ningún aviso: no está bajo ni vacío, es que
 todavía no hay nada puesto.
 
+**Corregir uno que ya diste de alta.** Edita el filamento y ahí está la misma
+casilla, siempre que no hayas impreso nada con el rollo puesto: esa bobina vuelve
+al cajón con su marca, su peso y su precio. En cuanto has impreso con ella la
+casilla desaparece, porque el rollo es la ventana en la que se cuentan esos gramos
+y quitarlo los perdería.
+
 ### Registrar una impresión
 
 `Nueva impresión` pide fecha, nombre del proyecto, una fila por color con sus

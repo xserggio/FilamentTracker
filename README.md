@@ -179,6 +179,12 @@ which is the day it actually starts.
 An unopened filament never raises an alert: it is not low and it is not empty,
 there is simply nothing fitted yet.
 
+**Correcting one you already added.** Edit the filament and the same tick is
+there, as long as nothing has been printed from the fitted roll: that spool goes
+back in the drawer with its brand, weight and price intact. Once you have printed
+from it the tick disappears, because the roll is the window those grams are
+counted in and removing it would lose them.
+
 ### Logging a print
 
 `New print` takes a date, a project name, one row per colour with its grams, an
