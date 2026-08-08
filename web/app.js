@@ -326,7 +326,11 @@ function buildAlerts() {
     // you something you can see is false, which is the fastest way to lose the
     // reader's trust in everything else it says.
     lows.forEach((f) => alerts.push({
-      key: f.mismatch ? `mismatch:${f.id}` : `low:${f.id}`,
+      // Running low and having run out are different news, and the second one
+      // matters more -- so they are different keys. Silencing "getting low"
+      // must not also silence "it is gone", and when a low spool empties the
+      // old mute stops matching anything and is swept away.
+      key: f.mismatch ? `mismatch:${f.id}` : (f.empty ? `empty:${f.id}` : `low:${f.id}`),
       color: f.mismatch ? 'var(--warn)' : (f.empty ? 'var(--danger)' : 'var(--warn)'),
       title: f.name, id: f.id,
       sub: f.mismatch ? t('alert.mismatch', { n: g(f.over) })
