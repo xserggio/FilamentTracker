@@ -667,6 +667,10 @@ function filteredPrints() {
 
 function renderHistory() {
   const list = filteredPrints();
+  // nothing filtered, nothing to unfilter: the button only exists when it does
+  // something, which also stops it reading as "clear the table"
+  const h = S.his;
+  $('#hisClear').hidden = !(h.search || h.filament || h.from || h.to || h.failedOnly);
   // the cost column only earns its space once something has a price
   const showCost = !!S.stats.has_prices;
   $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
