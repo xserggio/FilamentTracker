@@ -864,5 +864,10 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .muted-link{font-size:var(--t-sm);color:var(--muted-2);cursor:pointer;text-decoration:underline;
   text-underline-offset:2px}
 .muted-link:hover{color:var(--text)}
-.alert .icon-btn.sm{opacity:0;transition:opacity .12s}
-.alert:hover .icon-btn.sm{opacity:1}
+/* A control nobody can find is a control that does not exist. The alert list is
+   short -- a handful of rows at most -- so its buttons are always there, quiet
+   until the pointer arrives. The history table keeps its hover-only actions:
+   eighty rows of permanent icons would be the opposite problem. */
+.alert .icon-btn.sm{color:var(--muted-2);transition:color .12s,background .12s}
+.alert:hover .icon-btn.sm{color:var(--muted)}
+.alert .icon-btn.sm:hover{color:var(--text);background:var(--hover-2)}
