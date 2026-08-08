@@ -490,6 +490,7 @@ function renderInventory() {
       </div>`}
 
       <div class="fcard-foot">
+        <div class="frow">
         <span class="used" title="${esc(f.sealed ? t('fil.sealedHint') : t('inv.openedTitle', {
           d: fdate(f.roll_opened), used: kg(f.total_used) }))}">${
           f.sealed ? esc(t('inv.sealed'))
@@ -505,6 +506,7 @@ function renderInventory() {
                 title="${esc(t('roll.mode.adjust'))}">${svg('scale')}</button>
         <button class="icon-btn sm" data-dry="${f.id}"
                 title="${esc(t('roll.mode.dry'))}">${svg('drop')}</button>`}
+        </div>
         <button class="btn sm" data-roll="${f.id}">${
           esc(t(f.sealed ? 'inv.openRoll' : 'inv.newRoll'))}</button>
       </div>
@@ -794,15 +796,25 @@ async function saveFail() {
 }
 
 /* ---------- STATISTICS ---------- */
+/* The months are stacked in the colours of the filaments that made them.
+   Nothing invented and nothing decorative: it is the same palette sitting in
+   the drawer, and it turns a plain bar chart into a picture of what was
+   printed. A black filament on a dark ground would be a hole in the bar, so
+   every band carries a hairline. */
 function columns(data) {
   if (!data || !data.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
   const max = Math.max(...data.map((d) => d.grams), 1);
-  return `<div class="columns">${data.map((d) => `
-    <div class="col" title="${g(d.grams)} g · ${d.prints}">
+  return `<div class="columns">${data.map((d) => {
+    const split = (d.split || []).length ? d.split : [{ hex: '', name: '', grams: d.grams }];
+    return `<div class="col" title="${g(d.grams)} g · ${esc(t('stats.prints', { n: d.prints }))}">
       <span class="cv">${g(d.grams)}</span>
-      <span class="stack"><span class="fill" style="height:${Math.max(3, (d.grams / max) * 100)}%"></span></span>
+      <span class="stack"><span class="fill" style="height:${Math.max(3, (d.grams / max) * 100)}%">
+        ${split.map((p) => `<i style="height:${(p.grams / d.grams) * 100}%;background:${
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name)} · ${g(p.grams)} g"></i>`).join('')}
+      </span></span>
       <span class="cl">${fmonth(d.month)}</span>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function bars(rows, opts = {}) {
