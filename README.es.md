@@ -54,6 +54,10 @@ secarlo bastante más a menudo que el PLA.
 - **Estadísticas.** Gramos por mes, filamentos más usados, reparto por material,
   proyectos que más consumen y material desperdiciado.
 - **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
+- **Pestaña AMS.** Qué rollo hay en cada hueco ahora mismo, con la bobina externa.
+- **Claro y oscuro.** Oscuro por defecto; el claro está pensado aparte, no es el
+  inverso, y cualquiera de los dos puede seguir a Windows.
+- **Ayuda dentro de la app.** La versión corta de este manual, a un clic.
 - **Seis idiomas.** Español, inglés, francés, alemán, portugués e italiano.
 
 ## Descargar
@@ -186,6 +190,19 @@ casilla, siempre que no hayas impreso nada con el rollo puesto: esa bobina vuelv
 al cajón con su marca, su peso y su precio. En cuanto has impreso con ella la
 casilla desaparece, porque el rollo es la ventana en la que se cuentan esos gramos
 y quitarlo los perdería.
+
+### AMS
+
+<img src="docs/ams.png" alt="AMS">
+
+Qué rollo hay en cada hueco ahora mismo. La app no puede preguntárselo a la
+impresora, así que esto lo llevas tú — un clic en un hueco para poner o quitar
+un rollo. Todos los huecos se dibujan tengan algo o no, porque saber que uno
+está libre vale tanto como saber qué hay en él, y la bobina externa siempre está.
+
+Las unidades se eligen en la propia pestaña, de ninguna a cuatro, con cuatro
+huecos cada una. Una bobina solo puede estar en un sitio, así que cargarla en
+otro hueco la saca de donde estaba, y el selector te dice dónde está ya cada una.
 
 ### Registrar una impresión
 
@@ -364,6 +381,20 @@ visor de SQLite vale.
 
 ---
 
+### Ayuda, y qué aspecto tiene
+
+**Ayuda** lleva dentro de la app la versión corta de este manual: el modelo en un
+párrafo, qué hace cada control de la tarjeta, secado, pesar un rollo, Bambu
+Studio, la pestaña AMS y dónde viven los datos.
+
+**Ajustes → Aspecto** cambia entre oscuro, claro o lo que tenga Windows. El
+oscuro es el predeterminado. El claro no es el oscuro invertido: los grises
+llevan un sesgo cálido para que cualquier filamento se asiente sin dominante,
+los colores semánticos se oscurecen para mantener contraste sobre blanco, y la
+elevación se hace con sombra en vez de con una superficie más clara.
+
+<img src="docs/light.png" alt="El tema claro">
+
 ## Para desarrolladores
 
 ### Ejecutar desde el código
@@ -404,7 +435,7 @@ slicer.py      lee las placas que ha laminado Bambu Studio
 build.ps1      empaquetado con PyInstaller
 web/           index.html · style.css · app.js · i18n.js · icon.ico
 brand/         logo en navy, negro y blanco (svg, png, ico)
-tools/         generador del catálogo, datos y laminado de ejemplo, capturas
+tools/         generador del catálogo, datos, laminado y AMS de ejemplo, capturas
 data/          tu base de datos (no está en el repo)
 ```
 
