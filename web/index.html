@@ -44,6 +44,10 @@
         <svg viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/></svg>
         <span data-i18n="nav.stats">Statistics</span>
       </button>
+      <button class="nav-item" data-view="help">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.5"/><path d="M12 17h.01"/></svg>
+        <span data-i18n="nav.help">Help</span>
+      </button>
       <button class="nav-item" data-view="settings">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/></svg>
         <span data-i18n="nav.settings">Settings</span>
@@ -190,6 +194,49 @@
       </section>
 
       <!-- ============ SETTINGS ============ -->
+      <!-- The manual, in the app. Short on purpose: what the app is built out
+           of and what the controls do, with the long version a click away. -->
+      <section class="view" id="view-help" hidden>
+        <div class="card help-card">
+          <h2 data-i18n="help.model">model</h2>
+          <p data-i18n="help.modelTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.card">card</h2>
+          <p data-i18n="help.cardTxt"></p>
+          <dl class="help-keys">
+            <dt>&minus; / +</dt><dd data-i18n="help.keySpare"></dd>
+            <dt data-i18n="help.keyCount">the number</dt><dd data-i18n="help.keyCountTxt"></dd>
+            <dt>&#9878;</dt><dd data-i18n="help.keyScale"></dd>
+            <dt>&#128167;</dt><dd data-i18n="help.keyDrop"></dd>
+          </dl>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.dry">dry</h2>
+          <p data-i18n="help.dryTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.weigh">weigh</h2>
+          <p data-i18n="help.weighTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.slicer">slicer</h2>
+          <p data-i18n="help.slicerTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.ams">ams</h2>
+          <p data-i18n="help.amsTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.data">data</h2>
+          <p data-i18n="help.dataTxt"></p>
+        </div>
+        <p class="help-more">
+          <span data-i18n="help.more"></span>
+          <a href="#" id="helpRepo" data-i18n="help.moreLink">the full manual on GitHub</a>
+        </p>
+      </section>
+
       <section class="view" id="view-settings" hidden>
         <div class="card">
           <div class="card-head"><h2 data-i18n="set.prefs">Preferences</h2></div>

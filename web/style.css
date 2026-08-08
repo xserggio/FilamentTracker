@@ -835,3 +835,23 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .ams-opt b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ams-opt small{color:var(--muted-2);font-variant-numeric:tabular-nums}
 .ams-opt.here{border-color:var(--accent-line);background:var(--accent-soft)}
+
+/* ============ help ============
+   Reading, not scanning: one column at a comfortable measure, which is the one
+   place in the app where a wide window should not mean a wide line. */
+#view-help{max-width:70ch}
+.help-card h2{font-family:var(--display);font-size:var(--t-lg);font-weight:600;
+  letter-spacing:-.15px;margin-bottom:7px}
+.help-card p{color:var(--muted);font-size:var(--t-md);line-height:1.65}
+.help-keys{
+  display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:baseline;
+  margin:13px 0 0;padding-top:13px;border-top:1px solid var(--line-soft);
+}
+.help-keys dt{
+  font-family:var(--label);font-size:var(--t-sm);color:var(--text);white-space:nowrap;
+  font-weight:600;
+}
+.help-keys dd{margin:0;color:var(--muted);font-size:var(--t-sm);line-height:1.5}
+.help-more{color:var(--muted-2);font-size:var(--t-sm)}
+.help-more a{color:var(--accent-text);cursor:pointer;text-decoration:underline;
+  text-underline-offset:2px}
