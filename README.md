@@ -256,7 +256,13 @@ with *dry it* once past the limit. It also appears in the dashboard alerts.
 
 Limits depend on the plastic and live in **Settings → Drying by material**. The
 defaults: PLA and its variants 60 days, PLA-CF/ABS/ASA 45, PETG 30, TPU and PC 14,
-PA/Nylon/PVA 7. Anything not listed uses 45.
+PA/Nylon/PVA 7.
+
+About sixty materials are listed, but manufacturers name products faster than any
+list can follow. Anything unrecognised falls back to **its family**, not to a flat
+number: `PETG Rapid` is a PETG and gets 30 days, `TPU-95A` is a TPU and gets 14,
+`PA6-CF` is a polyamide and gets 7. The material field is free text, so type
+whatever is on the box — and if you disagree with the interval, it is editable.
 
 ### Weighing a spool
 

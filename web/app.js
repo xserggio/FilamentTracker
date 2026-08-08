@@ -868,9 +868,14 @@ function renderSettings() {
   // materials actually in use first; the rest stays collapsed
   const used = [...new Set(S.filaments.map((f) => f.material))].sort();
   const others = Object.keys(S.dryDays).filter((m) => !used.includes(m)).sort();
+  // A material with no entry of its own is not on 45 days: it inherits its
+  // family, and the filament already carries the limit actually being applied.
+  // Showing 45 here would contradict what the inventory is doing.
+  const limitOf = (m) => S.dryDays[m]
+    ?? (S.filaments.find((f) => f.material === m) || {}).dry_limit ?? 45;
   const row = (m) => `<label class="field"><span>${esc(m)}</span>
       <input type="number" min="1" max="3650" step="1" data-mat="${esc(m)}"
-             value="${S.dryDays[m] ?? 45}"></label>`;
+             value="${limitOf(m)}"></label>`;
   $('#dryGridUsed').innerHTML = used.map(row).join('');
   $('#dryGridOther').innerHTML = others.map(row).join('');
 
