@@ -1235,6 +1235,21 @@ class Store:
                 "GROUP BY m ORDER BY m"
             )
         ]
+        # What each month was actually made of. The monthly chart is the one
+        # place the whole palette shows up at once, and the colours are not a
+        # decoration: they are the filaments that were spent.
+        splits = {}
+        for r in db.execute(
+            "SELECT substr(p.date,1,7) m, f.name, f.hex, COALESCE(SUM(pi.grams),0) g "
+            "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+            "JOIN filaments f ON f.id = pi.filament_id "
+            "GROUP BY m, f.id ORDER BY m, g DESC"
+        ):
+            splits.setdefault(r["m"], []).append(
+                {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
+        for entry in by_month:
+            entry["split"] = splits.get(entry["month"], [])
+
         by_filament = [
             {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2), "prints": r["n"]}
             for r in db.execute(
