@@ -958,3 +958,22 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 /* An odd number of cards leaves one alone in the left column, which reads as a
    mistake rather than as the end of the list. The last one takes the width. */
 .stats-grid > .card:last-child:nth-child(odd){grid-column:1 / -1}
+
+/* Reading a print. The rows of the history are a summary; this is the rest of
+   it, without opening a form to find out. */
+.pinfo-tags{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:14px}
+.pinfo-specs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.pinfo-note{
+  margin-top:14px;padding:11px 13px;border-radius:var(--r-sm);
+  background:var(--bg-2);border:1px solid var(--line-soft);
+  font-size:13px;color:var(--text-2);white-space:pre-wrap;
+}
+.pinfo-link{
+  display:inline-flex;align-items:center;gap:7px;margin-top:14px;font-size:13px;
+  /* svg() ships no size of its own, and an anchor with no colour of its own
+     gets the browser's blue */
+  color:var(--accent-text);cursor:pointer;text-decoration:none;
+}
+.pinfo-link:hover{text-decoration:underline}
+.pinfo-link svg{width:15px;height:15px;flex:none}
+.table tbody tr[data-pinfo]{cursor:pointer}

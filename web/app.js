@@ -13,6 +13,7 @@ const S = {
   picked: new Set(), lastPick: null,
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
+  infoPrint: null,
   mismatchTarget: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
   ams: [], amsTarget: null,
@@ -880,7 +881,7 @@ function renderHistory() {
   const showCost = !!S.stats.has_prices;
   $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
-    <tr class="${S.picked.has(p.id) ? 'picked' : ''}">
+    <tr class="${S.picked.has(p.id) ? 'picked' : ''}" data-pinfo="${p.id}">
       <td class="pick-col"><input type="checkbox" class="tick" data-pick="${p.id}"
           ${S.picked.has(p.id) ? 'checked' : ''} title="${esc(t('his.pick'))}"></td>
       <td class="date">${fdate(p.date)}</td>
@@ -951,6 +952,16 @@ function renderHistory() {
       S.his.group = c.dataset.gid;
       $('#hisGroup').value = c.dataset.gid;
       renderHistory();
+    };
+  });
+
+  $$('#historyTable tr[data-pinfo]').forEach((tr) => {
+    tr.onclick = (e) => {
+      // the checkbox, the group chip and the row's own buttons all stop the
+      // click before it gets here; anything else on the row means "let me read
+      // this one"
+      if (e.target.closest('button, input, [data-gid]')) return;
+      openPrintInfo(S.prints.find((p) => p.id == tr.dataset.pinfo));
     };
   });
 
@@ -1471,6 +1482,36 @@ function openMismatch(f) {
   show('#mismatchModal');
 }
 
+/* Reading a print is not editing one. The history row is a summary -- date,
+   name, colours, total -- and the rest of what was recorded has until now been
+   reachable only by opening the form, which is a strange place to be put when
+   all you did was ask what something was. */
+function openPrintInfo(p) {
+  if (!p) return;
+  S.infoPrint = p;
+  $('#pinfoTitle').textContent = p.project;
+  const spec = (label, value) =>
+    `<span class="spec"><i>${esc(label)}</i><b>${esc(value)}</b></span>`;
+  $('#pinfoBody').innerHTML = `
+    <div class="pinfo-tags">
+      <span class="muted">${esc(fdate(p.date))}</span>
+      ${p.group_name ? `<span class="gchip">${esc(p.group_name)}</span>` : ''}
+      ${failTag(p)}
+    </div>
+    <h3 class="sub-head">${esc(t('print.items'))}</h3>
+    <div class="fchips">${p.items.map(chip).join('')}</div>
+    <div class="pinfo-specs">
+      ${spec(t('his.total'), `${g(p.total)} g`)}
+      ${p.cost ? spec(t('his.cost'), money(p.cost)) : ''}
+    </div>
+    ${p.notes ? `<div class="pinfo-note">${esc(p.notes)}</div>` : ''}
+    ${p.url ? `<a class="pinfo-link" href="#" id="pinfoLink">${svg('link')}${
+      esc(t('his.openLink'))}</a>` : ''}`;
+  const link = $('#pinfoLink');
+  if (link) link.onclick = (e) => { e.preventDefault(); call('open_url', p.url); };
+  show('#pinfoModal');
+}
+
 /* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
@@ -1953,6 +1994,10 @@ function wire() {
     S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : filteredPrints());
   $('#hisPickNone').onclick = clearPicked;
   $('#allProjects').onclick = openAllProjects;
+  $('#pinfoEdit').onclick = () => {
+    hide('#pinfoModal');
+    openPrint(S.infoPrint);
+  };
   $('#mmWeigh').onclick = () => {
     hide('#mismatchModal');
     openRoll(S.mismatchTarget, 'adjust');

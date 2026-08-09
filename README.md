@@ -207,8 +207,14 @@ optional link to the model page, and notes. There is no four-colour limit.
 
 <img src="docs/history.png" alt="History">
 
-In the history, each row has a link button (if you saved a URL), a **`!`** button,
-an edit button and a delete button.
+Click a row to read it. What the history shows is a summary — date, name,
+colours, total — and the rest of what was recorded used to be reachable only by
+opening the form, which is a strange place to be put when all you did was ask
+what something was. The sheet has the group it belongs to, whether it failed,
+the notes and the link, and an **Edit** button for when you did mean the form.
+
+Each row also has, on hover, a link button (if you saved a URL), a **`!`**
+button, an edit button and a delete button.
 
 Every heading sorts: click **Total** for the heaviest prints, **Cost** for the
 dearest, **Project** for A to Z, **Filaments** for the ones that took the most
