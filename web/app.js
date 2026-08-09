@@ -13,7 +13,7 @@ const S = {
   picked: new Set(), lastPick: null,
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
-  infoPrint: null,
+  infoPrint: null, infoProject: null,
   mismatchTarget: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
   ams: [], amsTarget: null,
@@ -735,12 +735,26 @@ async function openDetail(f) {
     <h3 class="sub-head">${esc(t('detail.prints'))}
       <small>${esc(t('detail.total', { n: d.prints.length, g: kg(totalG) }))}</small></h3>
     ${d.prints.length ? `<div class="det-prints"><table class="table">${d.prints.map((p) => `
-      <tr>
+      <tr data-pinfo="${p.id}">
         <td class="date" style="width:104px">${fdate(p.date)}</td>
         <td class="proj">${esc(p.project)}${p.failed ? failTag(p) : ''}</td>
         <td class="total right" style="width:78px">${g(p.grams)} g</td>
       </tr>`).join('')}</table></div>`
       : `<div class="spares-empty">${esc(t('detail.noPrints'))}</div>`}`;
+
+  // the prints a filament went into are the obvious next question about it,
+  // and reading one should not mean closing this and finding it in the history
+  wirePrintRows($('#detailBody'));
+}
+
+/* Any table of prints, anywhere, opens the print's sheet on click. */
+function wirePrintRows(root) {
+  $$('tr[data-pinfo]', root).forEach((tr) => {
+    tr.onclick = (e) => {
+      if (e.target.closest('button, input, a, [data-gid]')) return;
+      openPrintInfo(S.prints.find((p) => p.id == tr.dataset.pinfo));
+    };
+  });
 }
 
 /* ---------- MODAL: spares ---------- */
@@ -955,15 +969,9 @@ function renderHistory() {
     };
   });
 
-  $$('#historyTable tr[data-pinfo]').forEach((tr) => {
-    tr.onclick = (e) => {
-      // the checkbox, the group chip and the row's own buttons all stop the
-      // click before it gets here; anything else on the row means "let me read
-      // this one"
-      if (e.target.closest('button, input, [data-gid]')) return;
-      openPrintInfo(S.prints.find((p) => p.id == tr.dataset.pinfo));
-    };
-  });
+  // the checkbox, the group chip and the row's own buttons all stop the click
+  // before it gets there; anything else on a row means "let me read this one"
+  wirePrintRows($('#historyTable'));
 
   const find = (id) => S.prints.find((p) => p.id == id);
   $$('[data-pedit]').forEach((b) => { b.onclick = () => openPrint(find(b.dataset.pedit)); });
@@ -1143,10 +1151,9 @@ function projectRow(p) {
     // prints it took, and only once something has a price
     sub: t('stats.prints', { n: p.prints })
       + (S.stats.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
-    action: () => {
-      hide('#projectsModal');
-      gotoHistory(p.group_id ? { group: String(p.group_id) } : { search: p.project });
-    },
+    // the sheet, not the history: the history is a button away on it, and a
+    // list of rows is a poor answer to "what was this project"
+    action: () => openProjectInfo(p),
   };
 }
 
@@ -1482,6 +1489,50 @@ function openMismatch(f) {
   show('#mismatchModal');
 }
 
+/* A project is a name several prints share; a group is that name made
+   deliberate. One sheet does for both, because from the outside they are the
+   same question: what went into this, and what did it cost.
+
+   It takes a row from the statistics rather than working the totals out again
+   -- the grams, the cost and the colours are already agreed there, and two
+   places computing the same figure is two places to disagree. */
+function openProjectInfo(p) {
+  if (!p) return;
+  S.infoProject = p;
+  const mine = S.prints.filter((x) => (p.group_id
+    ? x.group_id == p.group_id
+    : !x.group_id && x.project === p.project));
+  const dates = mine.map((x) => x.date).sort();
+  const spec = (label, value) =>
+    `<span class="spec"><i>${esc(label)}</i><b>${esc(value)}</b></span>`;
+
+  $('#projTitle').textContent = p.project;
+  $('#projBody').innerHTML = `
+    <div class="pinfo-tags">
+      ${dates.length ? `<span class="muted">${esc(dates.length > 1
+        ? t('proj.between', { from: fdate(dates[0]), to: fdate(dates[dates.length - 1]) })
+        : fdate(dates[0]))}</span>` : ''}
+      ${p.group_id ? `<span class="gchip">${esc(t('print.group'))}</span>` : ''}
+    </div>
+    <div class="pinfo-specs">
+      ${spec(t('his.total'), `${g(p.grams)} g`)}
+      ${S.stats.has_prices && p.cost ? spec(t('his.cost'), money(p.cost)) : ''}
+      ${spec(t('kpi.prints'), String(p.prints))}
+    </div>
+    <h3 class="sub-head">${esc(t('print.items'))}</h3>
+    <div class="fchips proj-colours">${(p.split || []).map(chip).join('')}</div>
+    <h3 class="sub-head">${esc(t('detail.prints'))}</h3>
+    ${mine.length ? `<div class="det-prints"><table class="table">${mine.map((x) => `
+      <tr data-pinfo="${x.id}">
+        <td class="date" style="width:104px">${fdate(x.date)}</td>
+        <td class="proj">${esc(x.project)}${failTag(x)}</td>
+        <td class="total right" style="width:78px">${g(x.total)} g</td>
+      </tr>`).join('')}</table></div>`
+      : `<div class="spares-empty">${esc(t('detail.noPrints'))}</div>`}`;
+  wirePrintRows($('#projBody'));
+  show('#projModal');
+}
+
 /* Reading a print is not editing one. The history row is a summary -- date,
    name, colours, total -- and the rest of what was recorded has until now been
    reachable only by opening the form, which is a strange place to be put when
@@ -1495,7 +1546,8 @@ function openPrintInfo(p) {
   $('#pinfoBody').innerHTML = `
     <div class="pinfo-tags">
       <span class="muted">${esc(fdate(p.date))}</span>
-      ${p.group_name ? `<span class="gchip">${esc(p.group_name)}</span>` : ''}
+      ${p.group_name ? `<button class="gchip pinfo-group" id="pinfoGroup">${
+        esc(p.group_name)}</button>` : ''}
       ${failTag(p)}
     </div>
     <h3 class="sub-head">${esc(t('print.items'))}</h3>
@@ -1507,6 +1559,11 @@ function openPrintInfo(p) {
     ${p.notes ? `<div class="pinfo-note">${esc(p.notes)}</div>` : ''}
     ${p.url ? `<a class="pinfo-link" href="#" id="pinfoLink">${svg('link')}${
       esc(t('his.openLink'))}</a>` : ''}`;
+  const grp = $('#pinfoGroup');
+  if (grp) {
+    grp.onclick = () => openProjectInfo(
+      (S.stats.top_projects || []).find((x) => x.group_id === p.group_id));
+  }
   const link = $('#pinfoLink');
   if (link) link.onclick = (e) => { e.preventDefault(); call('open_url', p.url); };
   show('#pinfoModal');
@@ -1927,8 +1984,20 @@ function confirmDialog(title, text, fn) {
   S.confirmFn = fn;
   show('#confirmModal');
 }
-function show(sel) { $(sel).hidden = false; }
-function hide(sel) { $(sel).hidden = true; }
+/* Sheets open on top of sheets -- a filament leads to a print, a print to its
+   project, a project back to a print -- and DOM order cannot say that A goes
+   over B and B over A. Whichever was opened last is the one on top. */
+let modalTop = 60;
+function show(sel) {
+  const el = $(sel);
+  el.style.zIndex = ++modalTop;
+  el.hidden = false;
+}
+function hide(sel) {
+  $(sel).hidden = true;
+  // back to the floor once none is left, so the number does not climb forever
+  if (!$$('.overlay:not([hidden])').length) modalTop = 60;
+}
 
 /* ---------- events ---------- */
 function wire() {
@@ -1994,6 +2063,13 @@ function wire() {
     S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : filteredPrints());
   $('#hisPickNone').onclick = clearPicked;
   $('#allProjects').onclick = openAllProjects;
+  $('#projHistory').onclick = () => {
+    const p = S.infoProject;
+    hide('#projModal');
+    hide('#projectsModal');
+    hide('#pinfoModal');
+    gotoHistory(p.group_id ? { group: String(p.group_id) } : { search: p.project });
+  };
   $('#pinfoEdit').onclick = () => {
     hide('#pinfoModal');
     openPrint(S.infoPrint);

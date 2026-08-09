@@ -635,6 +635,24 @@
 </div>
 
 <!-- ============ MODAL: confirm ============ -->
+<!-- ============ MODAL: what a project was ============ -->
+<!-- A project is a name several prints share, and a group is that name made
+     deliberate. The same sheet does for both: what it weighed, what it cost,
+     which colours went into it and which prints it is made of. -->
+<div class="overlay" id="projModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="projTitle">Project</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body" id="projBody"></div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
+      <button class="btn primary" id="projHistory" data-i18n="proj.inHistory">See in history</button>
+    </footer>
+  </div>
+</div>
+
 <!-- ============ MODAL: what a print was ============ -->
 <!-- Clicking a row to read it should not put you in a form. Editing is a
      button away, which is the right distance for something you did not ask

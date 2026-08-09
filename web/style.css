@@ -977,3 +977,11 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .pinfo-link:hover{text-decoration:underline}
 .pinfo-link svg{width:15px;height:15px;flex:none}
 .table tbody tr[data-pinfo]{cursor:pointer}
+.det-prints tr[data-pinfo]{cursor:pointer}
+.det-prints tr[data-pinfo]:hover{background:var(--hover)}
+
+/* A project's sheet. The colours it took, then the prints it is made of. */
+.proj-colours{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.pinfo-group{
+  border:0;padding:0;background:none;font:inherit;color:inherit;cursor:pointer;
+}
