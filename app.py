@@ -35,6 +35,11 @@ def err(message):
 
 
 class Api:
+    # How many unread plates one sweep will open. Generous, because it only
+    # ever counts files it has not seen before, and a folder full of them is
+    # exactly the case worth catching up on.
+    SWEEP = 60
+
     def __init__(self):
         self._store = Store(DB_PATH)
         self._window = None
@@ -306,21 +311,34 @@ class Api:
                 since = 0.0
             if data.get("all"):
                 since = 0.0
-            fils = s.filaments()
             folder = s.get_settings().get("slicer_dir", "")
             want = int(data.get("limit") or 3)
 
-            # Read the folder first, whatever was asked for: it is the only
-            # moment a plate can be captured, and a plate seen once is kept.
-            fresh = slicer.latest_slices(limit=want, since=since, custom=folder)
-            for sl in fresh:
+            # Sweeping and offering are different jobs, and tying them together
+            # was losing plates: the card asks for one, so only one was ever
+            # taken in. Slice and send three plates with the app shut, open it,
+            # and the two older ones were still sitting in the folder unread --
+            # until Bambu Studio closed and took them.
+            #
+            # So the sweep takes everything new, however many that is, and the
+            # asking is answered afterwards from what has been taken in.
+            for sl in slicer.latest_slices(limit=self.SWEEP, since=since,
+                                           custom=folder,
+                                           skip=s.known_slice_files()):
                 s.remember_slice(sl)
 
-            found = fresh
             if data.get("all"):
-                # Everything the app has ever read, which is a superset of
-                # whatever survives in the folder today.
-                found = s.stored_slices(limit=want)
+                found = s.stored_slices(limit=want, reread=True)
+            else:
+                # The card offers what has not been put aside yet, newest first.
+                found = [x for x in s.stored_slices(limit=max(want, 8))
+                         if float(x["stamp"] or 0) > since][:want]
+            # Working out which spool each colour is means reading the whole
+            # inventory, and the card asks this every minute with nothing to
+            # show nine times out of ten. Nothing to offer, nothing to work out.
+            if not found:
+                return ok([])
+            fils = s.filaments()
 
             out = []
             for sl in found:
