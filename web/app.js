@@ -1896,6 +1896,16 @@ function wire() {
   $('#hisTo').onchange = (e) => { S.his.to = e.target.value; renderHistory(); };
   $('#hisFailed').onchange = (e) => { S.his.failedOnly = e.target.checked; renderHistory(); };
   $('#hisGroup').onchange = (e) => { S.his.group = e.target.value; renderHistory(); };
+
+  // The column headings stick underneath the filters, and the filters change
+  // height when they wrap. Measuring beats guessing, and beats hard-coding a
+  // number that is wrong in five of the six languages.
+  const bar = $('#view-history .toolbar');
+  // less the 22px it is pulled up by, which is what it actually covers
+  const measure = () => document.documentElement.style.setProperty(
+    '--bar-h', `${Math.round(bar.getBoundingClientRect().height) - 22}px`);
+  new ResizeObserver(measure).observe(bar);
+  measure();
   $$('#historyTable th[data-sort]').forEach((th) => {
     th.onclick = () => sortHistory(th.dataset.sort);
     th.title = t('his.sortBy', { what: th.textContent.trim() });
