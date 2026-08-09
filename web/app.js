@@ -1116,7 +1116,10 @@ function renderStats() {
   // which is exact, instead of by a name that could also be a print's own
   const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
     label: p.project, value: p.grams, split: p.split,
-    sub: t('stats.prints', { n: p.prints }),
+    // what it weighed is on the bar; what it cost belongs next to how many
+    // prints it took, and only once something has a price
+    sub: t('stats.prints', { n: p.prints })
+      + (st.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
     action: () => gotoHistory(p.group_id
       ? { group: String(p.group_id) } : { search: p.project }),
   }));

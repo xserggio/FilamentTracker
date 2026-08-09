@@ -441,6 +441,10 @@ Grams per month, most used filaments, split by material, hungriest projects and
 wasted material. The KPI tiles on the Dashboard and here are clickable and take you
 to the matching view with the filters already applied.
 
+*Hungriest projects* says what each one cost as well as what it weighed, once
+anything has a price — the grams are what you used, and the money is usually the
+part you were actually curious about.
+
 ### Importing from Excel
 
 **Settings → Import from Excel** reads a spreadsheet exported from Google Sheets
