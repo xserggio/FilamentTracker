@@ -152,8 +152,12 @@
           </select>
           <input type="date" id="hisFrom" class="select" data-i18n-title="his.from">
           <input type="date" id="hisTo" class="select" data-i18n-title="his.to">
+          <select id="hisGroup" class="select">
+            <option value="" data-i18n="his.allGroups">All groups</option>
+          </select>
           <label class="toggle"><input type="checkbox" id="hisFailed"><span data-i18n="his.failedOnly">Failed only</span></label>
           <button class="btn ghost sm" id="hisClear" data-i18n="his.clear">Clear</button>
+          <button class="btn sm" id="hisGroupThese" hidden></button>
         </div>
         <div class="card no-pad">
           <table class="table" id="historyTable">
@@ -226,6 +230,10 @@
         <div class="card help-card">
           <h2 data-i18n="help.ams">ams</h2>
           <p data-i18n="help.amsTxt"></p>
+        </div>
+        <div class="card help-card">
+          <h2 data-i18n="help.groups">groups</h2>
+          <p data-i18n="help.groupsTxt"></p>
         </div>
         <div class="card help-card">
           <h2 data-i18n="help.alerts">alerts</h2>
@@ -380,6 +388,12 @@
           <span data-i18n="print.project">Project</span>
           <input type="text" id="pProject" list="projectList" data-i18n-ph="print.projectPh" autocomplete="off">
           <datalist id="projectList"></datalist>
+        </label>
+        <label class="field wide">
+          <span><span data-i18n="print.group">Group</span> <i data-i18n="common.optional"></i></span>
+          <input type="text" id="pGroup" list="groupList" data-i18n-ph="print.groupPh" autocomplete="off">
+          <datalist id="groupList"></datalist>
+          <small data-i18n="print.groupHelp"></small>
         </label>
       </div>
       <div class="field">
@@ -595,6 +609,29 @@
 </div>
 
 <!-- ============ MODAL: confirm ============ -->
+<!-- ============ MODAL: name a group ============ -->
+<!-- Naming is the whole of making a group, so this is one field. -->
+<div class="overlay" id="groupModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 data-i18n="group.title">Group prints</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <p class="muted" id="gCount"></p>
+      <label class="field">
+        <span data-i18n="print.group">Group</span>
+        <input type="text" id="gName" list="groupList" data-i18n-ph="print.groupPh" autocomplete="off">
+        <small data-i18n="group.empty"></small>
+      </label>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancel</button>
+      <button class="btn primary" id="gSave" data-i18n="btn.save">Save</button>
+    </footer>
+  </div>
+</div>
+
 <div class="overlay" id="confirmModal" hidden>
   <div class="modal narrow">
     <header class="modal-head"><h2 id="cTitle" data-i18n="confirm.title">Are you sure?</h2><button class="icon-btn" data-close>&times;</button></header>

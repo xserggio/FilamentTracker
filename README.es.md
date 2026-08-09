@@ -51,6 +51,9 @@ secarlo bastante más a menudo que el PLA.
 - **Lee lo que lamina Bambu Studio.** Laminas una placa y un aviso te ofrece
   apuntar la impresión con los gramos ya puestos y un rollo propuesto por cada
   color. Tú confirmas; él lo recuerda.
+- **Agrupar impresiones en un proyecto.** Una casa son veinte impresiones;
+  agrúpalas y las estadísticas cuentan la casa, sin que ninguna pieza pierda
+  su nombre.
 - **Estadísticas.** Gramos por mes, filamentos más usados, reparto por material,
   proyectos que más consumen y material desperdiciado.
 - **Importación desde Excel.** Trae tu hoja de cálculo de una sentada.
@@ -211,6 +214,35 @@ colores.
 
 En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
 **`!`**, uno de editar y otro de eliminar.
+
+### Agrupar impresiones
+
+Una casa son veinte impresiones. En el historial cada una sigue siendo lo que es
+—una chimenea es una chimenea—, pero quieres que la casa cuente como la casa.
+
+El **grupo** va por encima del nombre del proyecto y no lo sustituye. Filtra el
+historial hasta ver lo que va junto y pulsa **Agrupar estas N**, que aparece al
+lado de *Quitar filtros* y dice cuántas filas va a tocar. Le pones nombre y ya
+está. No hay casillas que marcar porque no hace falta: buscar *casa UP* ya ha
+dejado a la vista justo esas.
+
+<img src="docs/history.png" alt="Historial">
+
+Lo que cambia cuando las impresiones están en un grupo:
+
+- **Estadísticas** cuenta el grupo en vez de las impresiones sueltas, así que
+  *Proyectos que más consumen* enseña la casa con su peso real y sus colores, y al
+  pulsarla el historial se filtra al grupo.
+- **Buscar** el nombre del grupo encuentra sus piezas, se llame como se llame
+  cada una.
+- El desplegable **Todos los grupos** filtra el historial a uno, o a lo que no
+  está en ninguno.
+- Cada fila lleva una etiqueta con el nombre del grupo; al pulsarla, se filtra.
+
+Lo demás no se mueve. Una impresión sin grupo se comporta igual que siempre, y el
+grupo no es más que un nombre: si vacías el campo se desagrupa, y un grupo que se
+queda sin impresiones desaparece. El mismo campo **Grupo** está en el formulario,
+para archivar una impresión nueva al apuntarla.
 
 ### Después de laminar en Bambu Studio
 
