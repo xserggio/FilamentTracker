@@ -1356,6 +1356,12 @@ function sliceNote(i) {
   // the profile already names the material ("Bambu PLA Matte"), so saying both
   // would just read as "PLA · Generic PLA"
   const what = (i.profile ? i.profile.replace(/\s*@.*$/, '') : '') || i.material || '?';
+  // when the AMS is why this spool was picked, say so: the colour on screen
+  // will often disagree with it, and that is the one thing worth explaining
+  if (i.from_slot) {
+    const why = t('slice.fromSlot', { n: i.from_slot, what: esc(what) });
+    return i.confident ? why : `<b>${esc(t('slice.check'))}</b> ${why}`;
+  }
   return i.confident
     ? t('slice.sure', { what: esc(what) })
     : `<b>${esc(t('slice.check'))}</b> ${t('slice.unsure', { what: esc(what) })}`;

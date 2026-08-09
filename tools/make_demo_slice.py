@@ -17,8 +17,9 @@ import sys
 import zipfile
 
 # One 3mf, two filaments: the red carries the plate, the blue is an accent.
-# Both are Basic profiles, which is what makes the app fall back to colour and
-# ask for a confirmation -- the state worth showing.
+# Both are Basic profiles, so there is no product line to go on -- what is left
+# is the slot and the colour, which is the interesting case: the sample AMS
+# agrees with the first and not with the second.
 PLATE = [
     {"id": 1, "type": "PLA", "color": "#D62828", "used_m": "8.09", "used_g": "24.13",
      "profile": "Bambu PLA Basic @BBL A1"},

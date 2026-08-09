@@ -261,10 +261,26 @@ das a Guardar, y antes puedes cambiar lo que quieras.
 **El color del laminado no es el rollo que tienes puesto.** Casi siempre eliges un
 perfil porque es el único que existe — no hay Matte en Generic, así que
 seleccionas el de Bambu Lab tengas el rollo que tengas — o cambias el color desde
-la pantalla de la impresora y el laminador no se entera. Por eso la propuesta va
-primero por material y línea de producto (un perfil *Matte* busca un rollo mate),
-y el color solo desempata. La fila de la que no está seguro sale en ámbar con
-*Comprueba el rollo*.
+la pantalla de la impresora y el laminador no se entera.
+
+Así que lo que más pesa no es el color, sino **el hueco**. Una placa dice de qué
+hueco salió cada color, y si la pestaña AMS dice qué había en ese hueco, ese es
+el rollo que se usó, se eligiera lo que se eligiera en pantalla. Si no lo dice,
+la propuesta va por material y línea de producto (un perfil *Matte* busca un
+rollo mate) y el color solo desempata. La fila de la que no está seguro sale en
+ámbar con *Comprueba el rollo*, y todas dicen de dónde sale su propuesta.
+
+La pestaña AMS la llevas tú, así que no se da por buena sin más. Delante hay dos
+comprobaciones que una pestaña desactualizada no puede pasar:
+
+- **Tiene que ser anterior a la placa.** Cada hueco guarda el día que se cargó, y
+  un rollo puesto después de laminar no estaba ahí cuando se laminó.
+- **Tiene que cuadrar con la placa.** Un hueco que dice PLA donde la placa dice
+  PETG está desactualizado para ese hueco, y se ignora.
+
+Pasadas las dos, contesta el hueco — y si el color de la pantalla lo contradice
+de plano, la fila sigue diciendo *Comprueba el rollo*, para que veas que las dos
+cosas no coinciden y decidas.
 
 **Aprende.** El rollo que confirmas queda apuntado contra esa combinación exacta
 de material + perfil + color, así que la próxima vez que se lamine lo mismo ya no
