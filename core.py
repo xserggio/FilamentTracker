@@ -116,6 +116,9 @@ CREATE TABLE IF NOT EXISTS slices (
     project       TEXT NOT NULL DEFAULT '',
     total         REAL NOT NULL DEFAULT 0,
     items         TEXT NOT NULL DEFAULT '[]',
+    -- which reading produced those items, so a plate is re-read once after an
+    -- improvement and not on every look
+    parsed_with   INTEGER NOT NULL DEFAULT 0,
     logged_at     TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_slices_when ON slices(sliced_at DESC);
@@ -297,6 +300,13 @@ def norm_type(kind: str) -> str:
     return k if k in SPOOL_TYPES else "plastic"
 
 
+def slicer_parser() -> int:
+    """The reading in use, without importing the slicer at module load."""
+    import slicer
+
+    return slicer.PARSER
+
+
 def guess_tare(brand: str, kind: str = "plastic") -> float:
     """Suggested tare for a brand. Falls back to the generic figure."""
     b = _norm(brand)
@@ -413,6 +423,10 @@ class Store:
         if cols and "copy_path" not in cols:
             self.db.execute(
                 "ALTER TABLE slices ADD COLUMN copy_path TEXT NOT NULL DEFAULT ''")
+            self.db.commit()
+        if cols and "parsed_with" not in cols:
+            self.db.execute(
+                "ALTER TABLE slices ADD COLUMN parsed_with INTEGER NOT NULL DEFAULT 0")
             self.db.commit()
 
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
@@ -1132,15 +1146,17 @@ class Store:
         copy_path = self._archive_slice(fp, data.get("path") or "")
         self.db.execute(
             "INSERT INTO slices(fingerprint, path, copy_path, sliced_at, stamp, "
-            "project, total, items) VALUES(?,?,?,?,?,?,?,?) "
+            "project, total, items, parsed_with) VALUES(?,?,?,?,?,?,?,?,?) "
             "ON CONFLICT(fingerprint) DO UPDATE SET path=excluded.path, "
             "sliced_at=excluded.sliced_at, stamp=excluded.stamp, "
             "copy_path=CASE WHEN excluded.copy_path <> '' "
-            "THEN excluded.copy_path ELSE slices.copy_path END",
+            "THEN excluded.copy_path ELSE slices.copy_path END, "
+            "items=excluded.items, parsed_with=excluded.parsed_with",
             (fp, data.get("path") or "", copy_path, data.get("sliced_at") or "",
              float(data.get("stamp") or 0), data.get("project") or "",
              float(data.get("total") or 0),
-             json.dumps(data.get("items") or [], ensure_ascii=False)),
+             json.dumps(data.get("items") or [], ensure_ascii=False),
+             slicer_parser()),
         )
         # A cache this app has watched for a year is still only worth a page or
         # two of history, and the rest is dead weight in every backup.
@@ -1151,13 +1167,21 @@ class Store:
         self.db.commit()
         self._prune_archive()
 
-    def stored_slices(self, limit: int = 30) -> list:
+    def known_slice_files(self) -> set:
+        """The files already taken in, so a sweep does not open them again."""
+        return {(r["path"], r["stamp"]) for r in self.db.execute(
+            "SELECT path, stamp FROM slices WHERE path <> ''")}
+
+    def stored_slices(self, limit: int = 30, reread: bool = False) -> list:
         """Plates the app has read, newest first, whatever became of the files.
 
-        Where our own copy of the file survives it is read again rather than
-        trusting what was written down at the time: the reading improves, and
-        a plate kept as a file gets the better reading, not only the ones
-        sliced after it.
+        With `reread`, where our own copy of the file survives it is read
+        again rather than trusting what was written down at the time: the
+        reading improves, and a plate kept as a file gets the better reading,
+        not only the ones sliced after it. A better reading is written back,
+        so it is paid for once and not on every look -- which matters, because
+        the card asks for this every minute and opening thirty files each time
+        would be a strange way to spend a minute.
         """
         import slicer
 
@@ -1167,10 +1191,16 @@ class Store:
             (int(limit),),
         ):
             items = None
-            if r["copy_path"] and os.path.exists(r["copy_path"]):
+            stale = r["parsed_with"] != slicer.PARSER
+            if reread and stale and r["copy_path"] and os.path.exists(r["copy_path"]):
                 again = slicer.read_slice(r["copy_path"])
                 if again and again.get("items"):
                     items = again["items"]
+                    self.db.execute(
+                        "UPDATE slices SET items=?, parsed_with=? WHERE id=?",
+                        (json.dumps(items, ensure_ascii=False),
+                         slicer.PARSER, r["id"]))
+                    self.db.commit()
             if items is None:
                 try:
                     items = json.loads(r["items"])
@@ -1281,14 +1311,24 @@ class Store:
         slicing with it happen within minutes of each other, and the tab only
         stores the day.
         """
+        try:
+            units = max(0, min(4, int(self.get_settings().get("ams_units", 1))))
+        except ValueError:
+            units = 1
+        # Straight off the slots table rather than through ams(): that one
+        # builds the whole inventory to hang a filament on each slot, and this
+        # is asked once per plate -- thirty plates were costing thirty
+        # inventories to learn thirty filament ids.
         out = {}
-        for s in self.ams():
-            if s["external"] or not s["filament"]:
+        for r in self.db.execute(
+            "SELECT unit, slot, filament_id, loaded_at FROM ams_slots"
+        ):
+            if r["unit"] == self.EXTERNAL or r["unit"] > units:
                 continue
-            if before and (s["loaded_at"] or "") > before[:10]:
+            if before and (r["loaded_at"] or "") > before[:10]:
                 continue
-            n = (s["unit"] - 1) * self.AMS_SLOTS_PER_UNIT + s["slot"]
-            out[n] = s["filament"]["id"]
+            n = (r["unit"] - 1) * self.AMS_SLOTS_PER_UNIT + r["slot"]
+            out[n] = r["filament_id"]
         return out
 
     def set_ams_slot(self, unit: int, slot: int, filament_id=None):

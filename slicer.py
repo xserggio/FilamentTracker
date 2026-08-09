@@ -177,8 +177,22 @@ def _profiles(z, names) -> list:
     return [str(x) for x in ids] if isinstance(ids, list) else []
 
 
-def latest_slices(limit: int = 8, since: float = 0, custom: str = "") -> list:
-    """The most recently sliced projects, newest first."""
+# Bump this when read_slice starts getting something out of a plate that it did
+# not before. Plates kept as files are read again once, and only once, after a
+# version that knows more about them.
+PARSER = 2
+
+
+def latest_slices(limit: int = 8, since: float = 0, custom: str = "",
+                  skip=None) -> list:
+    """The most recently sliced projects, newest first.
+
+    `skip` is a set of (path, mtime) already known. Walking the folder is
+    cheap; opening every plate in it is not, and a sweep that runs every
+    minute would keep re-reading the same files to learn nothing. Skipped
+    files do not count towards the limit either -- the limit is on how much
+    new work one sweep does.
+    """
     root = cache_dir(custom)
     if not os.path.isdir(root):
         return []
@@ -192,7 +206,7 @@ def latest_slices(limit: int = 8, since: float = 0, custom: str = "") -> list:
                 mtime = os.path.getmtime(full)
             except OSError:
                 continue
-            if mtime > since:
+            if mtime > since and (not skip or (full, mtime) not in skip):
                 found.append((mtime, full))
     found.sort(reverse=True)
 
