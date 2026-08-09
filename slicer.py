@@ -199,19 +199,36 @@ def latest_slices(limit: int = 8, since: float = 0, custom: str = "") -> list:
     # One slicing run leaves several near-identical files in the cache. They are
     # the same print, so only the newest of each is worth offering.
     out, seen = [], set()
-    for _mtime, full in found:
+    for mtime, full in found:
         data = read_slice(full)
         if not data:
             continue
-        key = (data["project"], data["total"],
-               tuple((i["material"], i["hex"], i["grams"]) for i in data["items"]))
+        key = fingerprint(data)
         if key in seen:
             continue
         seen.add(key)
+        data["fingerprint"] = key
+        data["stamp"] = mtime
         out.append(data)
         if len(out) >= limit:
             break
     return out
+
+
+def fingerprint(data: dict) -> str:
+    """What tells one plate from another, independent of the file it came from.
+
+    The name, the total and every colour. Bambu Studio renames and rewrites the
+    files in its cache, so the path is no use as an identity -- and the app has
+    to recognise a plate it has already read even when the file it read it from
+    is gone.
+    """
+    return "|".join([
+        data.get("project") or "",
+        "%.2f" % float(data.get("total") or 0),
+    ] + ["%s:%s:%.2f" % (i.get("material") or "", i.get("hex") or "",
+                         float(i.get("grams") or 0))
+         for i in (data.get("items") or [])])
 
 
 ns = None                    # filled lazily to avoid a circular import

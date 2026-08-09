@@ -97,6 +97,26 @@ CREATE TABLE IF NOT EXISTS settings (
     value         TEXT NOT NULL
 );
 
+-- Every plate the app has read out of the slicer cache. That cache belongs to
+-- Bambu Studio, not to us: it writes a plate's figures there, sometimes does not
+-- write them at all, and clears them when it feels like it -- so an offer that
+-- was on screen a minute ago can be gone for good. Reading it once and keeping
+-- the result is the only way the offer survives the walk to the inventory tab
+-- and back.
+CREATE TABLE IF NOT EXISTS slices (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- what makes two readings the same plate: name, total and every colour
+    fingerprint   TEXT NOT NULL UNIQUE,
+    path          TEXT NOT NULL DEFAULT '',
+    sliced_at     TEXT NOT NULL DEFAULT '',
+    stamp         REAL NOT NULL DEFAULT 0,
+    project       TEXT NOT NULL DEFAULT '',
+    total         REAL NOT NULL DEFAULT 0,
+    items         TEXT NOT NULL DEFAULT '[]',
+    logged_at     TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_slices_when ON slices(sliced_at DESC);
+
 -- A handful of prints that are really one thing: a house is a chimney and a
 -- roof and a dozen balloons. The name on a print stays what it is -- plenty of
 -- prints are a whole project on their own -- and the group sits above it,
@@ -1041,6 +1061,61 @@ class Store:
              "grams": round(float(r["grams"]), 2)}
             for r in rows
         ]
+
+    # ---------- what the slicer has shown us ----------
+
+    KEEP_SLICES = 200
+
+    def remember_slice(self, data: dict) -> None:
+        """Keep a plate read from the cache, so losing the file does not lose it.
+
+        The same plate read again is the same row: the fingerprint is the name,
+        the total and every colour, which is what tells one plate from another
+        when the file it came from has been renamed or replaced.
+        """
+        fp = (data.get("fingerprint") or "").strip()
+        if not fp:
+            return
+        self.db.execute(
+            "INSERT INTO slices(fingerprint, path, sliced_at, stamp, project, "
+            "total, items) VALUES(?,?,?,?,?,?,?) "
+            "ON CONFLICT(fingerprint) DO UPDATE SET path=excluded.path, "
+            "sliced_at=excluded.sliced_at, stamp=excluded.stamp",
+            (fp, data.get("path") or "", data.get("sliced_at") or "",
+             float(data.get("stamp") or 0), data.get("project") or "",
+             float(data.get("total") or 0),
+             json.dumps(data.get("items") or [], ensure_ascii=False)),
+        )
+        # A cache this app has watched for a year is still only worth a page or
+        # two of history, and the rest is dead weight in every backup.
+        self.db.execute(
+            "DELETE FROM slices WHERE id NOT IN "
+            "(SELECT id FROM slices ORDER BY sliced_at DESC, id DESC LIMIT ?)",
+            (self.KEEP_SLICES,))
+        self.db.commit()
+
+    def stored_slices(self, limit: int = 30) -> list:
+        """Plates the app has read, newest first, whatever became of the files."""
+        out = []
+        for r in self.db.execute(
+            "SELECT * FROM slices ORDER BY sliced_at DESC, id DESC LIMIT ?",
+            (int(limit),),
+        ):
+            try:
+                items = json.loads(r["items"])
+            except ValueError:
+                items = []
+            out.append({"fingerprint": r["fingerprint"], "path": r["path"],
+                        "sliced_at": r["sliced_at"], "stamp": r["stamp"],
+                        "project": r["project"], "total": r["total"],
+                        "items": items, "logged_at": r["logged_at"]})
+        return out
+
+    def mark_slice_logged(self, fingerprint: str) -> None:
+        """A print has been recorded from this plate, so the list can say so."""
+        self.db.execute("UPDATE slices SET logged_at=? WHERE fingerprint=?",
+                        (today(), fingerprint))
+        self.db.commit()
 
     # ---------- groups: several prints that are one thing ----------
 

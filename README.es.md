@@ -292,9 +292,15 @@ durante la sesión y lo vuelve a ofrecer al siguiente arranque; la **×** lo des
 para siempre. Un laminado que no llegaste a imprimir simplemente no se confirma nunca.
 
 **Ver slices de Bambu.** El aviso solo ofrece la placa más reciente, y una sola
-vez. En Historial, junto a *Nueva impresión*, **Ver slices de Bambu** lista todo
-lo que sigue en la carpeta — así puedes apuntar uno que apartaste, o uno que laminaste con
-la app cerrada. Solo aparece si hay una carpeta con placas dentro.
+vez. En Historial, junto a *Nueva impresión*, **Ver slices de Bambu** lista todas
+las placas que la app ha leído — así puedes apuntar una que apartaste, o una que
+laminaste con la app cerrada. La que ya apuntaste sale marcada como *apuntada*.
+
+La lista sale de lo que la app se guardó, no de lo que hay ahora en la carpeta.
+Esa carpeta es el borrador de Bambu Studio: escribe ahí los datos de una placa, a
+veces no los escribe, y la limpia cuando le parece. Leer la placa una vez y
+quedársela es lo que te deja darte cuenta a media oferta de que el rollo está
+gastado, ir a poner uno nuevo, y volver y encontrarte la oferta esperando.
 
 **La carpeta.** La encuentra sola, y en ese mismo panel se ve cuál está usando y
 cuántas placas laminadas hay dentro — así, si el aviso no aparece nunca, puedes

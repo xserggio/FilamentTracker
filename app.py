@@ -284,9 +284,14 @@ class Api:
     def slices(self, data=None):
         """Slices worth offering, each with a suggested spool per filament.
 
-        Anything already offered is filtered out by timestamp, so dismissing a
-        slice makes it stay dismissed and re-slicing the same plate offers it
-        again.
+        The card asks without "all" and gets only what is newer than the last
+        one dismissed, so putting one aside keeps it aside and re-slicing the
+        same plate offers it again.
+
+        The list asks with "all" and is served from what the app has kept, not
+        from the folder. The folder is Bambu Studio's, and it clears plates when
+        it likes -- go and fit the spool you just noticed was empty, come back,
+        and the offer would otherwise be gone for good.
         """
         data = data or {}
         try:
@@ -303,9 +308,22 @@ class Api:
                 since = 0.0
             fils = s.filaments()
             folder = s.get_settings().get("slicer_dir", "")
+            want = int(data.get("limit") or 3)
+
+            # Read the folder first, whatever was asked for: it is the only
+            # moment a plate can be captured, and a plate seen once is kept.
+            fresh = slicer.latest_slices(limit=want, since=since, custom=folder)
+            for sl in fresh:
+                s.remember_slice(sl)
+
+            found = fresh
+            if data.get("all"):
+                # Everything the app has ever read, which is a superset of
+                # whatever survives in the folder today.
+                found = s.stored_slices(limit=want)
+
             out = []
-            for sl in slicer.latest_slices(limit=int(data.get("limit") or 3),
-                                           since=since, custom=folder):
+            for sl in found:
                 # What the AMS tab says was loaded when this plate was sliced:
                 # a strong hint about which spool it used. Asked per slice
                 # rather than once, because a slot fitted after a plate was
@@ -339,11 +357,33 @@ class Api:
             return err(e)
 
     def dismiss_slice(self, data):
-        """Remember how far we have looked, so this slice is not offered again."""
+        """Remember how far we have looked, so this slice is not offered again.
+
+        The stamp travels with the slice rather than being read off the file:
+        the file may be gone by now, and stat-ing a missing one used to leave a
+        zero here -- which does not mean "nothing dismissed", it means every
+        plate in the cache gets offered all over again.
+        """
         try:
             path = data.get("path") or ""
-            stamp = os.path.getmtime(path) if path and os.path.exists(path) else 0
-            self._store.set_settings({"slicer_seen": str(stamp)})
+            stamp = 0.0
+            if path and os.path.exists(path):
+                stamp = os.path.getmtime(path)
+            else:
+                try:
+                    stamp = float(data.get("stamp") or 0)
+                except (TypeError, ValueError):
+                    stamp = 0.0
+            if stamp > 0:
+                self._store.set_settings({"slicer_seen": str(stamp)})
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def slice_logged(self, data):
+        """Mark a plate as one a print has been recorded from."""
+        try:
+            self._store.mark_slice_logged(data.get("fingerprint") or "")
             return ok()
         except Exception as e:
             return err(e)
