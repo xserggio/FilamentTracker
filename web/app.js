@@ -1123,6 +1123,30 @@ function columns(data, opts = {}) {
   }).join('')}</div>`;
 }
 
+/* A project leads to the history filtered to it -- by group when it is one,
+   which is exact, instead of by a name that could also be a print's own. */
+function projectRow(p) {
+  return {
+    label: p.project, value: p.grams, split: p.split,
+    // what it weighed is on the bar; what it cost belongs next to how many
+    // prints it took, and only once something has a price
+    sub: t('stats.prints', { n: p.prints })
+      + (S.stats.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
+    action: () => {
+      hide('#projectsModal');
+      gotoHistory(p.group_id ? { group: String(p.group_id) } : { search: p.project });
+    },
+  };
+}
+
+function openAllProjects() {
+  const rows = (S.stats.top_projects || []).map(projectRow);
+  $('#allProjectsCount').textContent = t('stats.allProjects', { n: rows.length });
+  $('#allProjectsList').innerHTML = bars(rows);
+  wireBars($('#allProjectsList'), rows);
+  show('#projectsModal');
+}
+
 /* Every bar is made of the filaments that made it, so none of them needs an
    invented colour: a material or a project is drawn from the same palette that
    is sitting in the drawer. And every row leads somewhere, because the obvious
@@ -1218,19 +1242,13 @@ function renderStats() {
   $('#chartMaterials').innerHTML = bars(mat);
   wireBars($('#chartMaterials'), mat);
 
-  // a project leads to the history filtered to it -- by group when it is one,
-  // which is exact, instead of by a name that could also be a print's own
-  const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
-    label: p.project, value: p.grams, split: p.split,
-    // what it weighed is on the bar; what it cost belongs next to how many
-    // prints it took, and only once something has a price
-    sub: t('stats.prints', { n: p.prints })
-      + (st.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
-    action: () => gotoHistory(p.group_id
-      ? { group: String(p.group_id) } : { search: p.project }),
-  }));
+  const all = (st.top_projects || []).map(projectRow);
+  const proj = all.slice(0, 8);
   $('#chartProjects').innerHTML = bars(proj);
   wireBars($('#chartProjects'), proj);
+  // the card is the top of the list; the rest is a click away rather than a
+  // scrollbar inside a card
+  $('#allProjects').hidden = all.length <= proj.length;
 
   // Which model keeps failing is the one question about wasted material that
   // can be acted on -- the total only tells you it happened.
@@ -1934,6 +1952,7 @@ function wire() {
   $('#hisGroupThese').onclick = () => groupThese(
     S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : filteredPrints());
   $('#hisPickNone').onclick = clearPicked;
+  $('#allProjects').onclick = openAllProjects;
   $('#mmWeigh').onclick = () => {
     hide('#mismatchModal');
     openRoll(S.mismatchTarget, 'adjust');

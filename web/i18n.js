@@ -129,6 +129,7 @@ const I18N = {
     'stats.rollLife': 'Lo que dura un rollo',
     'stats.lifeSub': '{n} rollo · {rate} g al día|{n} rollos · {rate} g al día',
     'stats.days': '{n} día|{n} días',
+    'stats.allProjects': '{n} proyecto en total|{n} proyectos en total',
     'stats.noData': 'Sin datos todavía.',
 
     'set.prefs': 'Preferencias',
@@ -551,6 +552,7 @@ const I18N = {
     'stats.rollLife': 'How long a spool lasts',
     'stats.lifeSub': '{n} spool · {rate} g a day|{n} spools · {rate} g a day',
     'stats.days': '{n} day|{n} days',
+    'stats.allProjects': '{n} project in all|{n} projects in all',
     'stats.noData': 'No data yet.',
 
     'set.prefs': 'Preferences',
@@ -973,6 +975,7 @@ const I18N = {
     'stats.rollLife': 'Combien de temps dure une bobine',
     'stats.lifeSub': '{n} bobine · {rate} g par jour|{n} bobines · {rate} g par jour',
     'stats.days': '{n} jour|{n} jours',
+    'stats.allProjects': '{n} projet en tout|{n} projets en tout',
     'stats.noData': 'Pas encore de données.',
 
     'set.prefs': 'Préférences',
@@ -1395,6 +1398,7 @@ const I18N = {
     'stats.rollLife': 'Wie lange eine Spule reicht',
     'stats.lifeSub': '{n} Spule · {rate} g am Tag|{n} Spulen · {rate} g am Tag',
     'stats.days': '{n} Tag|{n} Tage',
+    'stats.allProjects': '{n} Projekt insgesamt|{n} Projekte insgesamt',
     'stats.noData': 'Noch keine Daten.',
 
     'set.prefs': 'Einstellungen',
@@ -1817,6 +1821,7 @@ const I18N = {
     'stats.rollLife': 'Quanto dura uma bobina',
     'stats.lifeSub': '{n} bobina · {rate} g por dia|{n} bobinas · {rate} g por dia',
     'stats.days': '{n} dia|{n} dias',
+    'stats.allProjects': '{n} projeto no total|{n} projetos no total',
     'stats.noData': 'Ainda sem dados.',
 
     'set.prefs': 'Preferências',
@@ -2239,6 +2244,7 @@ const I18N = {
     'stats.rollLife': 'Quanto dura una bobina',
     'stats.lifeSub': '{n} bobina · {rate} g al giorno|{n} bobine · {rate} g al giorno',
     'stats.days': '{n} giorno|{n} giorni',
+    'stats.allProjects': '{n} progetto in tutto|{n} progetti in tutto',
     'stats.noData': 'Ancora nessun dato.',
 
     'set.prefs': 'Preferenze',

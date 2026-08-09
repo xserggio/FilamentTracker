@@ -198,7 +198,10 @@
             <div id="chartMaterials"></div>
           </div>
           <div class="card">
-            <div class="card-head"><h2 data-i18n="stats.topProjects">Hungriest projects</h2></div>
+            <div class="card-head">
+              <h2 data-i18n="stats.topProjects">Hungriest projects</h2>
+              <button class="btn ghost sm" id="allProjects" hidden data-i18n="dash.seeAll">See all</button>
+            </div>
             <div id="chartProjects"></div>
           </div>
           <div class="card">
@@ -632,6 +635,25 @@
 </div>
 
 <!-- ============ MODAL: confirm ============ -->
+<!-- ============ MODAL: every project ============ -->
+<!-- The card shows the handful that matter; this is the tail, which is where
+     you go looking for the one thing you printed in March. -->
+<div class="overlay" id="projectsModal" hidden>
+  <div class="modal">
+    <header class="modal-head">
+      <h2 data-i18n="stats.topProjects">Hungriest projects</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <p class="muted" id="allProjectsCount"></p>
+      <div id="allProjectsList"></div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
+    </footer>
+  </div>
+</div>
+
 <!-- ============ MODAL: the books do not add up ============ -->
 <!-- Weighing fixes the number whatever the cause, which is why it is worth
      asking first: if the spool was changed and never recorded, weighing welds
