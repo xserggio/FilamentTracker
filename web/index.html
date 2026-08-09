@@ -635,6 +635,24 @@
 </div>
 
 <!-- ============ MODAL: confirm ============ -->
+<!-- ============ MODAL: what a print was ============ -->
+<!-- Clicking a row to read it should not put you in a form. Editing is a
+     button away, which is the right distance for something you did not ask
+     for yet. -->
+<div class="overlay" id="pinfoModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="pinfoTitle">Print</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body" id="pinfoBody"></div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
+      <button class="btn primary" id="pinfoEdit" data-i18n="inv.edit">Edit</button>
+    </footer>
+  </div>
+</div>
+
 <!-- ============ MODAL: every project ============ -->
 <!-- The card shows the handful that matter; this is the tail, which is where
      you go looking for the one thing you printed in March. -->
