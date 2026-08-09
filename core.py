@@ -56,7 +56,10 @@ CREATE TABLE IF NOT EXISTS rolls (
     weight        REAL NOT NULL DEFAULT 1000,
     adjust        REAL NOT NULL DEFAULT 0,
     brand         TEXT NOT NULL DEFAULT '',
-    note          TEXT NOT NULL DEFAULT ''
+    note          TEXT NOT NULL DEFAULT '',
+    -- The day the scale overruled the books, so a roll carrying a correction
+    -- says so instead of just quietly holding a different number.
+    adjusted_at   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_rolls_fil ON rolls(filament_id, opened_at);
 
@@ -383,6 +386,12 @@ class Store:
 
     def _migrate(self):
         """Adds new columns to databases created by earlier versions."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
+        if "adjusted_at" not in cols:
+            self.db.execute(
+                "ALTER TABLE rolls ADD COLUMN adjusted_at TEXT NOT NULL DEFAULT ''")
+            self.db.commit()
+
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(prints)")}
         if "group_id" not in cols:
             self.db.execute(
@@ -539,6 +548,12 @@ class Store:
             # mentioning; this is the line past which it is worth a word.
             slack = max(MISMATCH_MIN_G, weight * MISMATCH_PCT)
             mismatch = over > slack
+            # What the roll turned out to hold once a scale had its say. The
+            # label is a claim; this is the measurement, and it is what a gram
+            # off this roll actually cost.
+            held = weight + adjust
+            if held < 1:
+                held = weight
             total_used = self.db.execute(
                 "SELECT COALESCE(SUM(grams),0) g FROM print_items WHERE filament_id=?",
                 (r["id"],),
@@ -585,8 +600,10 @@ class Store:
                     "dried_at": dried,
                     "tare": round(float(roll["tare"]), 1) if roll else 0.0,
                     "price": round(float(roll["price"]), 2) if roll else 0.0,
-                    "price_per_g": round(float(roll["price"]) / weight, 5)
-                    if roll and roll["price"] and weight else 0.0,
+                    # over what the roll really held, the same figure the cost
+                    # of a print is worked out from, so the two never disagree
+                    "price_per_g": round(float(roll["price"]) / held, 5)
+                    if roll and roll["price"] and held else 0.0,
                     "roll_type": roll_type,
                     "tare_hint": round(self.tare_for(roll_brand, roll_type), 1),
                     "days_open": days_since(opened),
@@ -865,7 +882,8 @@ class Store:
             (fid, roll["opened_at"]),
         ).fetchone()["g"]
         adjust = float(remaining) - (float(roll["weight"]) - used)
-        self.db.execute("UPDATE rolls SET adjust=? WHERE id=?", (adjust, roll["id"]))
+        self.db.execute("UPDATE rolls SET adjust=?, adjusted_at=? WHERE id=?",
+                        (adjust, today(), roll["id"]))
         if tare:
             self.db.execute("UPDATE rolls SET tare=? WHERE id=?", (float(tare), roll["id"]))
             # the brand learns from the scale: this replaces the table value
@@ -964,12 +982,20 @@ class Store:
         """
         index = {}
         for r in self.db.execute(
-            "SELECT filament_id, opened_at, weight, price FROM rolls "
+            "SELECT filament_id, opened_at, weight, adjust, price FROM rolls "
             "ORDER BY filament_id, opened_at, id"
         ):
+            # What the roll really held, not what the label claimed. A spool
+            # weighed after the books had drifted is the better figure of the
+            # two, and using the nominal weight instead overcharges every print
+            # that came off it -- by seventeen percent on a kilo that turned out
+            # to hold nearly twelve hundred grams.
+            held = float(r["weight"]) + float(r["adjust"] or 0)
+            if held < 1:
+                held = float(r["weight"])
             index.setdefault(r["filament_id"], []).append(
-                (r["opened_at"], float(r["price"]) / float(r["weight"])
-                 if r["price"] and r["weight"] else 0.0)
+                (r["opened_at"], float(r["price"]) / held
+                 if r["price"] and held else 0.0)
             )
         return index
 

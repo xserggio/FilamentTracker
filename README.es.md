@@ -369,6 +369,36 @@ entre versiones. Por eso, en cuanto corriges la tara pesando un carrete tuyo, la
 guarda **tu** número para esa combinación de marca y tipo y lo usa a partir de
 entonces. También se editan a mano en **Ajustes → Tara del carrete por marca**.
 
+### Cuando las cuentas no cuadran
+
+Si apuntas 1.075 g contra un rollo de 1.000, algo va mal, pero no lo que diría un
+contador ingenuo. En esa bobina hay plástico, así que la app no enseña un cero y
+lo llama vacío: dice que el libro se ha pasado, de cuánto, y no toca el número
+hasta que decidas qué ha pasado.
+
+Y lo pregunta, porque **pesar corrige el número venga de donde venga** y las
+causas no son la misma cosa:
+
+| Qué ha pasado | Qué lo arregla |
+|---|---|
+| El rollo traía más de lo que decía la etiqueta | Pesarlo — que un "1 kg" lleve 1.030 g es lo normal |
+| Una impresión fue contra el color equivocado | Corregir esa impresión |
+| Una fallida cuyos gramos nunca se bajaron | El botón **`!`** |
+| **Cambiaste la bobina y no lo apuntaste** | **Abrir un rollo nuevo con la fecha del cambio** |
+
+La última es la que merece pararse. Setenta y cinco gramos es muchísimo más que
+la variación entre bobinas, y si la causa es un cambio no apuntado, pesar lo
+empeora: suelda dos bobinas en el historial de un mismo rollo y le deja encima
+una corrección permanente. Abrir el rollo nuevo con la fecha del cambio mueve
+todo lo impreso desde entonces a ese rollo, y el descuadre suele desaparecer
+solo.
+
+Una corrección, una vez hecha, no se queda callada. El rollo la lleva con su
+fecha en la ficha del filamento —*Pesado el 9 ago 26: +175 g sobre lo nominal,
+llevaba 1.175 g*— y el coste por gramo se reparte sobre lo que el rollo llevaba
+de verdad. Diez euros entre 1.175 g no son diez euros entre 1.000, y cada
+impresión de ese rollo estaba cargada un quince por ciento de más.
+
 ### Precios y coste por impresión
 
 Pon el precio de un rollo — en el filamento, en un rollo nuevo o en cada
