@@ -296,11 +296,22 @@ vez. En Historial, junto a *Nueva impresión*, **Ver slices de Bambu** lista tod
 las placas que la app ha leído — así puedes apuntar una que apartaste, o una que
 laminaste con la app cerrada. La que ya apuntaste sale marcada como *apuntada*.
 
-La lista sale de lo que la app se guardó, no de lo que hay ahora en la carpeta.
-Esa carpeta es el borrador de Bambu Studio: escribe ahí los datos de una placa, a
-veces no los escribe, y la limpia cuando le parece. Leer la placa una vez y
-quedársela es lo que te deja darte cuenta a media oferta de que el rollo está
-gastado, ir a poner uno nuevo, y volver y encontrarte la oferta esperando.
+La lista sale de lo que la app se guardó, no de lo que hay ahora en la carpeta, y
+lo que se guarda es el fichero entero — en `data/slices`, junto a la base de
+datos. Así una placa leída una vez sigue leyéndose, y una mejora posterior en la
+lectura alcanza también a las placas ya vistas, no solo a las que lamines
+después. Se guardan doscientas, unos veinte megas.
+
+**Una placa solo se puede leer mientras Bambu Studio esté abierto.** Esa carpeta
+es su borrador, y cada sesión borra la suya al cerrarse. En mi máquina, la sesión
+que terminó a las 04:35 se llevó una placa laminada a las 03:42: fue legible esos
+cincuenta y tres minutos y ni uno más. Así que la app tiene que haber mirado
+antes de que cierres el laminador — ábrela, o déjala abierta, mientras imprimes.
+
+**Y solo ve las placas que has mandado a la impresora.** Laminar a secas escribe
+el gcode; el fichero que la app lee aparece cuando envías o exportas la placa.
+De las nueve placas de una carpeta de aquí, tres tienen gcode y nada más:
+laminados que nunca se imprimieron, y que nunca se ofrecieron.
 
 **La carpeta.** La encuentra sola, y en ese mismo panel se ve cuál está usando y
 cuántas placas laminadas hay dentro — así, si el aviso no aparece nunca, puedes

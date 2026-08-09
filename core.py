@@ -1,6 +1,7 @@
 """Data layer: SQLite schema and all the inventory/history logic."""
 
 import glob
+import hashlib
 import json
 import locale
 import os
@@ -107,7 +108,9 @@ CREATE TABLE IF NOT EXISTS slices (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     -- what makes two readings the same plate: name, total and every colour
     fingerprint   TEXT NOT NULL UNIQUE,
+    -- where it was read from, and our own copy of it in data/slices
     path          TEXT NOT NULL DEFAULT '',
+    copy_path     TEXT NOT NULL DEFAULT '',
     sliced_at     TEXT NOT NULL DEFAULT '',
     stamp         REAL NOT NULL DEFAULT 0,
     project       TEXT NOT NULL DEFAULT '',
@@ -406,6 +409,12 @@ class Store:
 
     def _migrate(self):
         """Adds new columns to databases created by earlier versions."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(slices)")}
+        if cols and "copy_path" not in cols:
+            self.db.execute(
+                "ALTER TABLE slices ADD COLUMN copy_path TEXT NOT NULL DEFAULT ''")
+            self.db.commit()
+
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
         if "adjusted_at" not in cols:
             self.db.execute(
@@ -1066,6 +1075,50 @@ class Store:
 
     KEEP_SLICES = 200
 
+    def slice_archive(self) -> str:
+        """Where the plates the app has read are kept, next to the database."""
+        return os.path.join(os.path.dirname(self.path), "slices")
+
+    def _archive_slice(self, fp: str, src: str) -> str:
+        """Take our own copy of the plate file, since Bambu Studio takes its back.
+
+        Keeping the file and not only what we understood of it means a later
+        reading can be better than today's. The slot a plate pulled from was
+        being read wrong until recently; with the file in hand, the plates
+        already seen get the fix too, instead of only the ones sliced after it.
+
+        The timestamp is copied with it -- the date of a plate is the date of
+        its file, and a copy that looked freshly made would lie about when it
+        was sliced.
+        """
+        if not src or not os.path.exists(src):
+            return ""
+        into = self.slice_archive()
+        try:
+            os.makedirs(into, exist_ok=True)
+            dest = os.path.join(
+                into, hashlib.sha1(fp.encode("utf-8")).hexdigest()[:16] + ".3mf")
+            if not os.path.exists(dest):
+                shutil.copy2(src, dest)
+            return dest
+        except OSError:
+            return ""
+
+    def _prune_archive(self) -> None:
+        """Drop the files of plates no longer in the table."""
+        into = self.slice_archive()
+        if not os.path.isdir(into):
+            return
+        keep = {os.path.basename(r["copy_path"])
+                for r in self.db.execute(
+                    "SELECT copy_path FROM slices WHERE copy_path <> ''")}
+        for fn in os.listdir(into):
+            if fn.endswith(".3mf") and fn not in keep:
+                try:
+                    os.remove(os.path.join(into, fn))
+                except OSError:
+                    pass
+
     def remember_slice(self, data: dict) -> None:
         """Keep a plate read from the cache, so losing the file does not lose it.
 
@@ -1076,12 +1129,15 @@ class Store:
         fp = (data.get("fingerprint") or "").strip()
         if not fp:
             return
+        copy_path = self._archive_slice(fp, data.get("path") or "")
         self.db.execute(
-            "INSERT INTO slices(fingerprint, path, sliced_at, stamp, project, "
-            "total, items) VALUES(?,?,?,?,?,?,?) "
+            "INSERT INTO slices(fingerprint, path, copy_path, sliced_at, stamp, "
+            "project, total, items) VALUES(?,?,?,?,?,?,?,?) "
             "ON CONFLICT(fingerprint) DO UPDATE SET path=excluded.path, "
-            "sliced_at=excluded.sliced_at, stamp=excluded.stamp",
-            (fp, data.get("path") or "", data.get("sliced_at") or "",
+            "sliced_at=excluded.sliced_at, stamp=excluded.stamp, "
+            "copy_path=CASE WHEN excluded.copy_path <> '' "
+            "THEN excluded.copy_path ELSE slices.copy_path END",
+            (fp, data.get("path") or "", copy_path, data.get("sliced_at") or "",
              float(data.get("stamp") or 0), data.get("project") or "",
              float(data.get("total") or 0),
              json.dumps(data.get("items") or [], ensure_ascii=False)),
@@ -1093,19 +1149,35 @@ class Store:
             "(SELECT id FROM slices ORDER BY sliced_at DESC, id DESC LIMIT ?)",
             (self.KEEP_SLICES,))
         self.db.commit()
+        self._prune_archive()
 
     def stored_slices(self, limit: int = 30) -> list:
-        """Plates the app has read, newest first, whatever became of the files."""
+        """Plates the app has read, newest first, whatever became of the files.
+
+        Where our own copy of the file survives it is read again rather than
+        trusting what was written down at the time: the reading improves, and
+        a plate kept as a file gets the better reading, not only the ones
+        sliced after it.
+        """
+        import slicer
+
         out = []
         for r in self.db.execute(
             "SELECT * FROM slices ORDER BY sliced_at DESC, id DESC LIMIT ?",
             (int(limit),),
         ):
-            try:
-                items = json.loads(r["items"])
-            except ValueError:
-                items = []
+            items = None
+            if r["copy_path"] and os.path.exists(r["copy_path"]):
+                again = slicer.read_slice(r["copy_path"])
+                if again and again.get("items"):
+                    items = again["items"]
+            if items is None:
+                try:
+                    items = json.loads(r["items"])
+                except ValueError:
+                    items = []
             out.append({"fingerprint": r["fingerprint"], "path": r["path"],
+                        "copy_path": r["copy_path"],
                         "sliced_at": r["sliced_at"], "stamp": r["stamp"],
                         "project": r["project"], "total": r["total"],
                         "items": items, "logged_at": r["logged_at"]})
