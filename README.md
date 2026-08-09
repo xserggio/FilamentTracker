@@ -292,11 +292,23 @@ History, next to *New print*, **View Bambu slices** lists every plate the app ha
 read — so one you put aside, or one sliced while the app was closed, can still be
 logged. One you have already entered is marked *logged*.
 
-The list comes from what the app kept, not from what is in the folder now. That
-folder is Bambu Studio's scratch space: it writes a plate's figures there, does
-not always write them at all, and clears them when it likes. Reading a plate once
-and keeping it is what lets you notice mid-offer that the spool is empty, go and
-fit a new one, and come back to find the offer still waiting.
+The list comes from what the app kept, not from what is in the folder now, and
+what it keeps is the file itself — in `data/slices`, next to the database. So a
+plate read once stays readable, and a later improvement to the reading reaches
+the plates already seen rather than only the ones sliced after it. Two hundred
+plates are kept, about twenty megabytes.
+
+**A plate can only be read while Bambu Studio is open.** That folder is its
+scratch space, and a session deletes its own folder when it closes. On my machine
+the session that ended at 04:35 took a plate sliced at 03:42 with it; it had been
+readable for those fifty-three minutes and not a second longer. So the app has to
+have looked before you close the slicer — open it, or leave it open, while you
+are printing.
+
+**And it only ever sees plates you sent to the printer.** Slicing alone writes
+the gcode; the file the app reads appears when you send or export the plate.
+Three of the nine plates in one run folder here have a gcode and nothing else —
+slices that were never printed, and never offered.
 
 **The folder.** Found on its own, and the same panel shows which one is in use
 and how many sliced plates are in it — so if the card never appears you can see
