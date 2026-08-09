@@ -1222,7 +1222,7 @@ function showSliceCard(sl) {
 function hideSliceCard(forget) {
   hide('#sliceCard');
   if (S.slice) {
-    if (forget) call('dismiss_slice', { path: S.slice.path });
+    if (forget) call('dismiss_slice', { path: S.slice.path, stamp: S.slice.stamp });
     else S.snoozed.add(S.slice.path);
   }
   S.slice = null;
@@ -1245,7 +1245,8 @@ async function openSliceList() {
     <button class="slice-row" data-slice="${i}">
       <span class="slice-when">${esc(sliceWhen(sl))}</span>
       <span class="slice-what">
-        <b>${esc(sl.project || t('slice.untitled'))}</b>
+        <b>${esc(sl.project || t('slice.untitled'))}</b>${
+          sl.logged_at ? `<span class="tag">${esc(t('slices.logged'))}</span>` : ''}
         <span class="slice-chips">${sl.items.map((it) => `
           <span class="slice-chip">
             <span class="dot" style="background:${esc(it.hex || '#888')}"></span>
@@ -1412,7 +1413,11 @@ async function savePrint() {
     .filter((r) => r.dataset.sig && r.querySelector('select').value)
     .map((r) => ({ signature: r.dataset.sig, filament_id: r.querySelector('select').value }));
   if (matches.length) await call('remember_matches', { matches });
-  if (S.slice) { call('dismiss_slice', { path: S.slice.path }); S.slice = null; }
+  if (S.slice) {
+    call('dismiss_slice', { path: S.slice.path, stamp: S.slice.stamp });
+    if (S.slice.fingerprint) call('slice_logged', { fingerprint: S.slice.fingerprint });
+    S.slice = null;
+  }
 
   hide('#printModal');
   await reload();
