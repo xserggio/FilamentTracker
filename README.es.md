@@ -447,6 +447,10 @@ Gramos por mes, filamentos más usados, reparto por material, proyectos que más
 consumen y material desperdiciado. Los KPIs del Panel y de aquí son clicables y te
 llevan a la vista correspondiente con los filtros ya puestos.
 
+*Proyectos que más consumen* dice también lo que costó cada uno, en cuanto algo
+tiene precio — los gramos son lo que gastaste, y el dinero suele ser lo que
+querías saber en realidad.
+
 ### Importar desde Excel
 
 **Ajustes → Importar desde Excel** lee una hoja exportada de Google Sheets con las
