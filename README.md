@@ -257,9 +257,26 @@ you can change anything first.
 pick a profile because it is the only one that exists — there is no Matte under
 Generic, so you select Bambu Lab's whatever spool is on the printer — or you
 change the colour on the printer's screen and the slicer never hears about it.
-So the suggestion goes on the material and the product line first (a *Matte*
-profile looks for a matte spool), and only uses the colour to break a tie. A row
-it is not sure about is highlighted in amber with *Check the spool*.
+
+So the strongest thing to go on is not the colour but **the slot**. A plate says
+which filament slot each of its colours came from, and if the AMS tab says what
+was in that slot, that is the spool the print used — whatever was picked on
+screen. Failing that the suggestion goes on the material and the product line (a
+*Matte* profile looks for a matte spool), with colour only breaking a tie. A row
+it is not sure about is highlighted in amber with *Check the spool*, and every
+row says where its suggestion came from.
+
+The AMS tab is kept by hand, so it is never taken on trust. Two checks stand in
+front of it, and an out-of-date tab cannot pass either:
+
+- **It has to predate the plate.** Every slot records the day it was fitted, and
+  a spool loaded after a plate was sliced was not in that slot when it was.
+- **It has to agree with the plate.** A slot claiming PLA where the plate says
+  PETG is out of date for that slot, and is ignored for it.
+
+Past both, the slot answers — and when the colour on screen flatly disagrees with
+it the row still says *Check the spool*, so you can see the two do not match and
+decide.
 
 **It learns.** The spool you confirm is remembered against that exact
 material + profile + colour, so the next time the same thing is sliced there is
@@ -346,6 +363,36 @@ Bambu ranges from 196 to 253 g, eSUN from 161 to 253 — because the tooling cha
 between versions. So the moment you correct the tare by weighing one of your own
 spools, the app stores **your** number for that brand and type and uses it from then
 on. They are also editable by hand in **Settings → Empty spool weight by brand**.
+
+### When the books do not add up
+
+Log 1,075 g against a 1,000 g roll and something is wrong, but not what a naive
+counter would say. There is plastic on that spool, so the app does not show a
+zero and call it empty — it says the books overshot, by how much, and leaves the
+number alone until you decide what happened.
+
+It asks, because **weighing corrects the number whatever the cause** and the
+causes are not the same thing:
+
+| What happened | What fixes it |
+|---|---|
+| The roll held more than the label said | Weigh it — a "1 kg" spool carrying 1,030 g is ordinary |
+| A print went against the wrong colour | Correct that print |
+| A failed print's grams were never brought down | The **`!`** button |
+| **You changed the spool and never recorded it** | **Open a new roll, dated when you changed it** |
+
+The last one is the one worth pausing for. Seventy-five grams is far more than
+spool-to-spool variation, and if the cause is a silent swap then weighing makes
+it worse: it welds two spools into one roll's history and leaves a permanent
+correction standing on it. Opening the new roll dated to the swap moves
+everything printed since onto that roll, and the mismatch usually disappears on
+its own.
+
+A correction, once made, is not silent. The roll carries it with its date on the
+filament sheet — *Weighed 9 Aug 26: +175 g on the nominal, it held 1,175 g* — and
+the cost per gram is worked out over what the roll really held. Ten euros over
+1,175 g is not ten euros over 1,000, and every print off that roll was being
+charged fifteen percent too much.
 
 ### Prices and what a print costs
 

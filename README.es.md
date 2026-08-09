@@ -261,10 +261,26 @@ das a Guardar, y antes puedes cambiar lo que quieras.
 **El color del laminado no es el rollo que tienes puesto.** Casi siempre eliges un
 perfil porque es el único que existe — no hay Matte en Generic, así que
 seleccionas el de Bambu Lab tengas el rollo que tengas — o cambias el color desde
-la pantalla de la impresora y el laminador no se entera. Por eso la propuesta va
-primero por material y línea de producto (un perfil *Matte* busca un rollo mate),
-y el color solo desempata. La fila de la que no está seguro sale en ámbar con
-*Comprueba el rollo*.
+la pantalla de la impresora y el laminador no se entera.
+
+Así que lo que más pesa no es el color, sino **el hueco**. Una placa dice de qué
+hueco salió cada color, y si la pestaña AMS dice qué había en ese hueco, ese es
+el rollo que se usó, se eligiera lo que se eligiera en pantalla. Si no lo dice,
+la propuesta va por material y línea de producto (un perfil *Matte* busca un
+rollo mate) y el color solo desempata. La fila de la que no está seguro sale en
+ámbar con *Comprueba el rollo*, y todas dicen de dónde sale su propuesta.
+
+La pestaña AMS la llevas tú, así que no se da por buena sin más. Delante hay dos
+comprobaciones que una pestaña desactualizada no puede pasar:
+
+- **Tiene que ser anterior a la placa.** Cada hueco guarda el día que se cargó, y
+  un rollo puesto después de laminar no estaba ahí cuando se laminó.
+- **Tiene que cuadrar con la placa.** Un hueco que dice PLA donde la placa dice
+  PETG está desactualizado para ese hueco, y se ignora.
+
+Pasadas las dos, contesta el hueco — y si el color de la pantalla lo contradice
+de plano, la fila sigue diciendo *Comprueba el rollo*, para que veas que las dos
+cosas no coinciden y decidas.
 
 **Aprende.** El rollo que confirmas queda apuntado contra esa combinación exacta
 de material + perfil + color, así que la próxima vez que se lamine lo mismo ya no
@@ -352,6 +368,36 @@ misma marca —Bambu va de 196 a 253 g y eSUN de 161 a 253— porque cambian el 
 entre versiones. Por eso, en cuanto corriges la tara pesando un carrete tuyo, la app
 guarda **tu** número para esa combinación de marca y tipo y lo usa a partir de
 entonces. También se editan a mano en **Ajustes → Tara del carrete por marca**.
+
+### Cuando las cuentas no cuadran
+
+Si apuntas 1.075 g contra un rollo de 1.000, algo va mal, pero no lo que diría un
+contador ingenuo. En esa bobina hay plástico, así que la app no enseña un cero y
+lo llama vacío: dice que el libro se ha pasado, de cuánto, y no toca el número
+hasta que decidas qué ha pasado.
+
+Y lo pregunta, porque **pesar corrige el número venga de donde venga** y las
+causas no son la misma cosa:
+
+| Qué ha pasado | Qué lo arregla |
+|---|---|
+| El rollo traía más de lo que decía la etiqueta | Pesarlo — que un "1 kg" lleve 1.030 g es lo normal |
+| Una impresión fue contra el color equivocado | Corregir esa impresión |
+| Una fallida cuyos gramos nunca se bajaron | El botón **`!`** |
+| **Cambiaste la bobina y no lo apuntaste** | **Abrir un rollo nuevo con la fecha del cambio** |
+
+La última es la que merece pararse. Setenta y cinco gramos es muchísimo más que
+la variación entre bobinas, y si la causa es un cambio no apuntado, pesar lo
+empeora: suelda dos bobinas en el historial de un mismo rollo y le deja encima
+una corrección permanente. Abrir el rollo nuevo con la fecha del cambio mueve
+todo lo impreso desde entonces a ese rollo, y el descuadre suele desaparecer
+solo.
+
+Una corrección, una vez hecha, no se queda callada. El rollo la lleva con su
+fecha en la ficha del filamento —*Pesado el 9 ago 26: +175 g sobre lo nominal,
+llevaba 1.175 g*— y el coste por gramo se reparte sobre lo que el rollo llevaba
+de verdad. Diez euros entre 1.175 g no son diez euros entre 1.000, y cada
+impresión de ese rollo estaba cargada un quince por ciento de más.
 
 ### Precios y coste por impresión
 

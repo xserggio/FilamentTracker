@@ -109,12 +109,18 @@ def read_slice(path: str) -> dict:
             grams = 0.0
         if grams <= 0:
             continue
+        try:
+            slot = int(a.get("id") or 0)
+        except ValueError:
+            slot = 0
         items.append({
             "material": (a.get("type") or "").strip(),
             "hex": (a.get("color") or "").strip(),
             "grams": round(grams, 2),
             "metres": round(float(a.get("used_m") or 0), 2),
             "tray": (a.get("tray_info_idx") or "").strip(),
+            # which filament slot the plate pulled this from, 1-based
+            "slot": slot,
         })
     if not items:
         return {}
@@ -125,9 +131,16 @@ def read_slice(path: str) -> dict:
         m for m in re.findall(r'<object[^>]*name="([^"]+)"', xml) if m))
     project = ", ".join(_clean_name(o) for o in objects[:3])
 
+    # There is one profile per slot the printer has, but only the slots a plate
+    # actually used appear above. Pairing them by position hands the filament in
+    # slot 4 the profile of slot 1 on any plate that does not start at 1 -- and
+    # the product line in that profile is the strongest term in the ranking, so
+    # a single-colour plate off the last slot was being matched against the
+    # wrong product line entirely.
     profiles = _profiles(z, names)
     for i, item in enumerate(items):
-        item["profile"] = profiles[i] if i < len(profiles) else ""
+        at = item["slot"] - 1 if item["slot"] else i
+        item["profile"] = profiles[at] if 0 <= at < len(profiles) else ""
 
     return {
         "path": path,
@@ -219,20 +232,40 @@ def _lines(profile: str) -> set:
     return {w for w in re.split(r"[^a-z0-9+]+", base) if w and w not in skip and len(w) > 2}
 
 
-def candidates(item: dict, filaments: list, remembered=None) -> dict:
+# How far the colour can be off before a slot's own answer is worth a second
+# look. Two colours you would call the same shade sit under 3; ten is a colour
+# you would name differently but not argue about.
+COLOUR_DOUBT = 10.0
+
+
+def candidates(item: dict, filaments: list, remembered=None, loaded=None) -> dict:
     """Which spool the slicer most likely meant, and why.
 
     Ranking, strongest first:
 
     1. a confirmation already given for this exact slice signature
-    2. same material  (a hard filter -- PLA is never PETG)
-    3. the product line matches, e.g. a "Matte" profile against a filament
+    2. what the AMS says is in the slot this plate pulled from
+    3. same material  (a hard filter -- PLA is never PETG)
+    4. the product line matches, e.g. a "Matte" profile against a filament
        whose name says matte
-    4. colour, only to break ties, because it is the least trustworthy signal
+    5. colour, only to break ties, because it is the least trustworthy signal
 
-    `confident` is only true for a remembered match or a near-perfect colour on
-    a same-material, same-line filament. Everything else is a suggestion the
-    user is expected to look at.
+    `loaded` maps a plate's filament slot to the spool the AMS tab says was in
+    it when the plate was sliced. It is not a tie-break: a spool that was
+    physically in the slot the plate pulled from is the spool the print used,
+    whatever colour was picked on screen -- and the colour on screen disagrees
+    most of the time, which is the whole reason any of this is hard.
+
+    Because that tab is kept by hand, it is only believed after two checks it
+    cannot pass while out of date. It is asked with the date of the slice, so a
+    slot fitted afterwards is never offered; and it goes through the same
+    material filter as everything else, so a tab claiming PLA where the plate
+    says PETG drops out. Past both, it answers -- and when the colour flatly
+    disagrees the answer is shown as one to check rather than as settled.
+
+    `confident` is only true for a remembered match, for a slot whose colour
+    also roughly agrees, or for a near-perfect colour on a same-material,
+    same-line filament.
     """
     global ns
     if ns is None:
@@ -241,6 +274,7 @@ def candidates(item: dict, filaments: list, remembered=None) -> dict:
     mat = (item.get("material") or "").strip().lower()
     lines = _lines(item.get("profile"))
     target = ns.lab(item.get("hex"))
+    in_slot = (loaded or {}).get(item.get("slot") or 0)
 
     family = mat.split()[0] if mat else ""
 
@@ -267,27 +301,44 @@ def candidates(item: dict, filaments: list, remembered=None) -> dict:
         scored.append({
             "id": f["id"], "name": f["name"], "hex": f.get("hex"),
             "delta": round(delta, 2), "line_hit": line_hit, "exact_material": exact,
+            # reaching here means the material agrees, so a spool the tab puts
+            # in this slot is one the plate really could have used
+            "in_ams": in_slot is not None and f["id"] == in_slot,
             "score": round(score, 2), "remaining": f.get("remaining", 0),
         })
     scored.sort(key=lambda c: c["score"])
 
-    pick, confident = None, False
+    pick, confident, from_slot = None, False, 0
     if remembered:
         hit = next((c for c in scored if c["id"] == remembered), None)
         if hit is None:
             hit = next((
                 {"id": f["id"], "name": f["name"], "hex": f.get("hex"),
-                 "delta": 0.0, "line_hit": True, "remaining": f.get("remaining", 0)}
+                 "delta": 0.0, "line_hit": True, "in_ams": False,
+                 "remaining": f.get("remaining", 0)}
                 for f in filaments if f["id"] == remembered), None)
         if hit:
             scored = [hit] + [c for c in scored if c["id"] != hit["id"]]
             pick, confident = hit["id"], True
+    # The slot answers before the score does. Moving it to the front rather
+    # than weighting it also keeps two slots of one plate off the same spool:
+    # a spool is in one slot or none, so at most one slot can claim it.
+    if pick is None:
+        hit = next((c for c in scored if c["in_ams"]), None)
+        if hit:
+            scored = [hit] + [c for c in scored if c["id"] != hit["id"]]
+            pick = hit["id"]
+            confident = hit["delta"] < COLOUR_DOUBT
+            from_slot = item.get("slot") or 0
     if pick is None and scored:
         best = scored[0]
         pick = best["id"]
         confident = best["line_hit"] and best["delta"] < 3
 
-    return {"pick": pick, "confident": confident, "options": scored[:8]}
+    return {"pick": pick, "confident": confident, "options": scored[:8],
+            # reported only when the slot is why this spool was chosen, so the
+            # card can say where the suggestion came from
+            "from_slot": from_slot}
 
 
 def signature(item: dict) -> str:

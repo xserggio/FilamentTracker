@@ -56,7 +56,10 @@ CREATE TABLE IF NOT EXISTS rolls (
     weight        REAL NOT NULL DEFAULT 1000,
     adjust        REAL NOT NULL DEFAULT 0,
     brand         TEXT NOT NULL DEFAULT '',
-    note          TEXT NOT NULL DEFAULT ''
+    note          TEXT NOT NULL DEFAULT '',
+    -- The day the scale overruled the books, so a roll carrying a correction
+    -- says so instead of just quietly holding a different number.
+    adjusted_at   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_rolls_fil ON rolls(filament_id, opened_at);
 
@@ -383,6 +386,12 @@ class Store:
 
     def _migrate(self):
         """Adds new columns to databases created by earlier versions."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
+        if "adjusted_at" not in cols:
+            self.db.execute(
+                "ALTER TABLE rolls ADD COLUMN adjusted_at TEXT NOT NULL DEFAULT ''")
+            self.db.commit()
+
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(prints)")}
         if "group_id" not in cols:
             self.db.execute(
@@ -539,6 +548,12 @@ class Store:
             # mentioning; this is the line past which it is worth a word.
             slack = max(MISMATCH_MIN_G, weight * MISMATCH_PCT)
             mismatch = over > slack
+            # What the roll turned out to hold once a scale had its say. The
+            # label is a claim; this is the measurement, and it is what a gram
+            # off this roll actually cost.
+            held = weight + adjust
+            if held < 1:
+                held = weight
             total_used = self.db.execute(
                 "SELECT COALESCE(SUM(grams),0) g FROM print_items WHERE filament_id=?",
                 (r["id"],),
@@ -585,8 +600,10 @@ class Store:
                     "dried_at": dried,
                     "tare": round(float(roll["tare"]), 1) if roll else 0.0,
                     "price": round(float(roll["price"]), 2) if roll else 0.0,
-                    "price_per_g": round(float(roll["price"]) / weight, 5)
-                    if roll and roll["price"] and weight else 0.0,
+                    # over what the roll really held, the same figure the cost
+                    # of a print is worked out from, so the two never disagree
+                    "price_per_g": round(float(roll["price"]) / held, 5)
+                    if roll and roll["price"] and held else 0.0,
                     "roll_type": roll_type,
                     "tare_hint": round(self.tare_for(roll_brand, roll_type), 1),
                     "days_open": days_since(opened),
@@ -865,7 +882,8 @@ class Store:
             (fid, roll["opened_at"]),
         ).fetchone()["g"]
         adjust = float(remaining) - (float(roll["weight"]) - used)
-        self.db.execute("UPDATE rolls SET adjust=? WHERE id=?", (adjust, roll["id"]))
+        self.db.execute("UPDATE rolls SET adjust=?, adjusted_at=? WHERE id=?",
+                        (adjust, today(), roll["id"]))
         if tare:
             self.db.execute("UPDATE rolls SET tare=? WHERE id=?", (float(tare), roll["id"]))
             # the brand learns from the scale: this replaces the table value
@@ -964,12 +982,20 @@ class Store:
         """
         index = {}
         for r in self.db.execute(
-            "SELECT filament_id, opened_at, weight, price FROM rolls "
+            "SELECT filament_id, opened_at, weight, adjust, price FROM rolls "
             "ORDER BY filament_id, opened_at, id"
         ):
+            # What the roll really held, not what the label claimed. A spool
+            # weighed after the books had drifted is the better figure of the
+            # two, and using the nominal weight instead overcharges every print
+            # that came off it -- by seventeen percent on a kilo that turned out
+            # to hold nearly twelve hundred grams.
+            held = float(r["weight"]) + float(r["adjust"] or 0)
+            if held < 1:
+                held = float(r["weight"])
             index.setdefault(r["filament_id"], []).append(
-                (r["opened_at"], float(r["price"]) / float(r["weight"])
-                 if r["price"] and r["weight"] else 0.0)
+                (r["opened_at"], float(r["price"]) / held
+                 if r["price"] and held else 0.0)
             )
         return index
 
@@ -1077,17 +1103,45 @@ class Store:
         except ValueError:
             units = 1
 
-        loaded = {(r["unit"], r["slot"]): r["filament_id"]
-                  for r in self.db.execute("SELECT unit, slot, filament_id FROM ams_slots")}
+        loaded = {(r["unit"], r["slot"]): (r["filament_id"], r["loaded_at"] or "")
+                  for r in self.db.execute(
+                      "SELECT unit, slot, filament_id, loaded_at FROM ams_slots")}
         by_id = {f["id"]: f for f in self.filaments()}
+
+        def cell(unit, slot, external=False):
+            fid, when = loaded.get((unit, slot), (None, ""))
+            return {"unit": unit, "slot": slot, "external": external,
+                    "loaded_at": when, "filament": by_id.get(fid)}
 
         out = []
         for unit in range(1, units + 1):
             for slot in range(1, self.AMS_SLOTS_PER_UNIT + 1):
-                out.append({"unit": unit, "slot": slot, "external": False,
-                            "filament": by_id.get(loaded.get((unit, slot)))})
-        out.append({"unit": self.EXTERNAL, "slot": 1, "external": True,
-                    "filament": by_id.get(loaded.get((self.EXTERNAL, 1)))})
+                out.append(cell(unit, slot))
+        out.append(cell(self.EXTERNAL, 1, external=True))
+        return out
+
+    def ams_by_plate_slot(self, before: str = "") -> dict:
+        """AMS contents keyed by the number a sliced plate uses for that slot.
+
+        Bambu Studio numbers a plate's filaments straight through the units, so
+        the second unit starts at 5. The external holder is left out: a plate
+        has no way of pointing at it, so nothing could be matched to it anyway.
+
+        `before` is the date of a slice, and it is what keeps a hand-kept tab
+        from lying about the past: a spool recorded as loaded *after* a plate
+        was sliced was not in that slot when it was sliced, so it is no
+        evidence about it. Loaded the same day counts -- fitting a spool and
+        slicing with it happen within minutes of each other, and the tab only
+        stores the day.
+        """
+        out = {}
+        for s in self.ams():
+            if s["external"] or not s["filament"]:
+                continue
+            if before and (s["loaded_at"] or "") > before[:10]:
+                continue
+            n = (s["unit"] - 1) * self.AMS_SLOTS_PER_UNIT + s["slot"]
+            out[n] = s["filament"]["id"]
         return out
 
     def set_ams_slot(self, unit: int, slot: int, filament_id=None):

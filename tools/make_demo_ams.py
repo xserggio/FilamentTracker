@@ -12,7 +12,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import Store  # noqa: E402
 
-WANT = ["PLA - black", "PLA - red", "PETG - black", "PLA Silk - gold", "PLA - grey"]
+# El hueco 1 lleva el rojo del laminado de ejemplo y el 2 no lleva el azul:
+# asi la captura ensena las dos caras, una fila resuelta por el hueco con el
+# color de acuerdo y otra en la que el hueco contesta y el color discrepa.
+WANT = ["PLA - red", "PLA - grey", "PETG - black", "PLA Silk - gold", "PLA - black"]
 
 
 def main(path):

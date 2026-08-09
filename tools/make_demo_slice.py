@@ -17,8 +17,9 @@ import sys
 import zipfile
 
 # One 3mf, two filaments: the red carries the plate, the blue is an accent.
-# Both are Basic profiles, which is what makes the app fall back to colour and
-# ask for a confirmation -- the state worth showing.
+# Both are Basic profiles, so there is no product line to go on -- what is left
+# is the slot and the colour, which is the interesting case: the sample AMS
+# agrees with the first and not with the second.
 PLATE = [
     {"id": 1, "type": "PLA", "color": "#D62828", "used_m": "8.09", "used_g": "24.13",
      "profile": "Bambu PLA Basic @BBL A1"},
@@ -63,7 +64,13 @@ def main(root):
         "object": OBJECT,
         "filaments": "\n".join(FILAMENT % f for f in PLATE),
     }
-    settings = {"filament_settings_id": [f["profile"] for f in PLATE]}
+    # un perfil por hueco del printer, no por filamento usado: asi es como
+    # lo escribe Bambu Studio, y es lo que hace que el numero de hueco importe
+    slots = {}
+    for f in PLATE:
+        slots[f["id"]] = f["profile"]
+    settings = {"filament_settings_id": [slots.get(i + 1, "Bambu PLA Basic @BBL A1")
+                                         for i in range(max(slots))]}
 
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("Metadata/slice_info.config", xml)
