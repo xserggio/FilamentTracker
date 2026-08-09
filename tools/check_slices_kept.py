@@ -56,6 +56,7 @@ with zipfile.ZipFile(plate, "w", zipfile.ZIP_DEFLATED) as z:
 s = Store(os.path.join(tempfile.mkdtemp(), "check.db"))
 
 # 1. La app lee la carpeta y se queda con lo que hay.
+stamp_original = os.path.getmtime(plate)
 leidos = slicer.latest_slices(limit=12, since=0, custom=cache)
 check("la carpeta trae la placa", len(leidos), 1)
 for sl in leidos:
@@ -75,6 +76,16 @@ with zipfile.ZipFile(resto, "w", zipfile.ZIP_DEFLATED) as z:
 check("la carpeta ya no la tiene", len(slicer.latest_slices(limit=12, since=0, custom=cache)), 0)
 check("la app si", len(s.stored_slices()), 1)
 check("intacta", s.stored_slices()[0]["project"], "soporte kindle")
+# y lo intacta que esta se demuestra releyendo: los gramos no salen de lo que
+# se apunto entonces, salen del fichero que la app se guardo
+check("releida del fichero propio", s.stored_slices()[0]["items"][0]["grams"], 81.52)
+
+# 2b. Y la copia esta en el directorio de la app, con la fecha del original.
+copia = s.stored_slices()[0]["copy_path"]
+check("hay copia propia", bool(copia) and os.path.exists(copia), True)
+check("en data/slices", os.path.dirname(copia), s.slice_archive())
+check("conserva la fecha del original",
+      round(os.path.getmtime(copia)), round(stamp_original))
 
 # 3. Leerla dos veces no la duplica: la identidad es el contenido, no la ruta.
 otra = os.path.join(cache, "Sun_Aug_09", "14_52_26#10052#50", "Metadata",
@@ -99,6 +110,10 @@ for i in range(6):
     s.remember_slice({"fingerprint": "x%d" % i, "sliced_at": "2026-08-%02d" % (i + 1),
                       "project": "p%d" % i, "total": i, "items": []})
 check("se queda con las ultimas", len(s.stored_slices(limit=99)), 3)
+# y la poda no se lleva por delante la copia de una que sigue en la tabla
+check("la copia de la que sigue, sigue", os.path.exists(copia), True)
+check("no quedan copias huerfanas",
+      len([f for f in os.listdir(s.slice_archive()) if f.endswith(".3mf")]), 1)
 
 
 # --------------------------------------------- descartar sin fichero delante
