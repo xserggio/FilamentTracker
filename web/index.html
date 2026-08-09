@@ -224,6 +224,10 @@
           <p data-i18n="help.weighTxt"></p>
         </div>
         <div class="card help-card">
+          <h2 data-i18n="help.mismatch">mismatch</h2>
+          <p data-i18n="help.mismatchTxt"></p>
+        </div>
+        <div class="card help-card">
           <h2 data-i18n="help.slicer">slicer</h2>
           <p data-i18n="help.slicerTxt"></p>
         </div>
@@ -609,6 +613,35 @@
 </div>
 
 <!-- ============ MODAL: confirm ============ -->
+<!-- ============ MODAL: the books do not add up ============ -->
+<!-- Weighing fixes the number whatever the cause, which is why it is worth
+     asking first: if the spool was changed and never recorded, weighing welds
+     two spools into one roll and leaves the correction standing for good. -->
+<div class="overlay" id="mismatchModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 data-i18n="mm.title">The books do not add up</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <p id="mmWhat"></p>
+      <div class="mm-choice">
+        <button class="btn wide-btn" id="mmWeigh">
+          <b data-i18n="mm.same">It is the same spool</b>
+          <small data-i18n="mm.sameSub"></small>
+        </button>
+        <button class="btn wide-btn" id="mmNew">
+          <b data-i18n="mm.changed">I changed it and did not say so</b>
+          <small data-i18n="mm.changedSub"></small>
+        </button>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancel</button>
+    </footer>
+  </div>
+</div>
+
 <!-- ============ MODAL: name a group ============ -->
 <!-- Naming is the whole of making a group, so this is one field. -->
 <div class="overlay" id="groupModal" hidden>

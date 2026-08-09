@@ -364,6 +364,36 @@ between versions. So the moment you correct the tare by weighing one of your own
 spools, the app stores **your** number for that brand and type and uses it from then
 on. They are also editable by hand in **Settings → Empty spool weight by brand**.
 
+### When the books do not add up
+
+Log 1,075 g against a 1,000 g roll and something is wrong, but not what a naive
+counter would say. There is plastic on that spool, so the app does not show a
+zero and call it empty — it says the books overshot, by how much, and leaves the
+number alone until you decide what happened.
+
+It asks, because **weighing corrects the number whatever the cause** and the
+causes are not the same thing:
+
+| What happened | What fixes it |
+|---|---|
+| The roll held more than the label said | Weigh it — a "1 kg" spool carrying 1,030 g is ordinary |
+| A print went against the wrong colour | Correct that print |
+| A failed print's grams were never brought down | The **`!`** button |
+| **You changed the spool and never recorded it** | **Open a new roll, dated when you changed it** |
+
+The last one is the one worth pausing for. Seventy-five grams is far more than
+spool-to-spool variation, and if the cause is a silent swap then weighing makes
+it worse: it welds two spools into one roll's history and leaves a permanent
+correction standing on it. Opening the new roll dated to the swap moves
+everything printed since onto that roll, and the mismatch usually disappears on
+its own.
+
+A correction, once made, is not silent. The roll carries it with its date on the
+filament sheet — *Weighed 9 Aug 26: +175 g on the nominal, it held 1,175 g* — and
+the cost per gram is worked out over what the roll really held. Ten euros over
+1,175 g is not ten euros over 1,000, and every print off that roll was being
+charged fifteen percent too much.
+
 ### Prices and what a print costs
 
 Give a spool a price -- on the filament, on a new roll or on each spare -- and the

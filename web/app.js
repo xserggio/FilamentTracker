@@ -9,6 +9,7 @@ const S = {
   his: { search: '', filament: '', from: '', to: '', failedOnly: false, group: '' },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
+  mismatchTarget: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
   ams: [], amsTarget: null,
 };
@@ -468,7 +469,7 @@ function renderDashboard() {
     b.onclick = (e) => {
       e.stopPropagation();
       const f = S.filaments.find((x) => x.id == b.dataset.weigh);
-      if (f) openRoll(f, 'adjust');
+      if (f) openMismatch(f);
     };
   });
   $$('#alerts [data-mute]').forEach((b) => {
@@ -717,6 +718,10 @@ async function openDetail(f) {
         <span class="dr-used">${esc(t('detail.consumed', { g: g(r.used) + ' g' }))}
           <small> / ${g(r.weight)} g</small></span>
         <span class="dr-days">${r.days != null ? esc(t('detail.lasted', { n: r.days })) : ''}</span>
+        ${r.adjusted_at ? `<span class="dr-fix">${esc(t('detail.weighed', {
+          date: fdate(r.adjusted_at), n: (r.adjust > 0 ? '+' : '') + g(r.adjust),
+          held: g(r.weight + r.adjust),
+        }))}</span>` : ''}
       </div>`).join('')}</div>`
       : `<div class="spares-empty">${esc(t('detail.noRolls'))}</div>`}
 
@@ -1290,6 +1295,17 @@ async function saveGroup() {
              : t('toast.ungrouped', { n: list.length }));
 }
 
+/* Weighing corrects the number whatever the cause, so it is worth a question
+   first. A spool that overshot by a few grams held a few grams more than the
+   label said; one that overshot by seventy-five was probably swapped without
+   being recorded, and weighing that one welds two spools into a single roll
+   and leaves the correction standing for good. */
+function openMismatch(f) {
+  S.mismatchTarget = f;
+  $('#mmWhat').textContent = t('mm.what', { name: f.name, n: g(f.over) });
+  show('#mismatchModal');
+}
+
 /* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
@@ -1751,6 +1767,14 @@ function wire() {
   $('#hisFailed').onchange = (e) => { S.his.failedOnly = e.target.checked; renderHistory(); };
   $('#hisGroup').onchange = (e) => { S.his.group = e.target.value; renderHistory(); };
   $('#hisGroupThese').onclick = () => groupThese(filteredPrints());
+  $('#mmWeigh').onclick = () => {
+    hide('#mismatchModal');
+    openRoll(S.mismatchTarget, 'adjust');
+  };
+  $('#mmNew').onclick = () => {
+    hide('#mismatchModal');
+    openRoll(S.mismatchTarget, 'new');
+  };
   $('#gSave').onclick = saveGroup;
   $('#gName').onkeydown = (e) => { if (e.key === 'Enter') saveGroup(); };
   $('#hisClear').onclick = () => {
