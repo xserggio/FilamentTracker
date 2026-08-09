@@ -902,3 +902,15 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 
 /* A roll that was weighed says so, next to what it was weighed against. */
 .dr-fix{grid-column:1 / -1;margin-top:4px;font-size:var(--t-xs);color:var(--muted)}
+
+/* Sortable headings. The arrow is only on the column doing the sorting: one
+   arrow says which, six arrows say nothing. */
+.table th[data-sort]{cursor:pointer;user-select:none;position:relative}
+.table th[data-sort]:hover{color:var(--text-2)}
+.table th[data-sort][data-dir]{color:var(--text)}
+.table th[data-sort][data-dir]::after{
+  content:'';display:inline-block;margin-left:5px;vertical-align:middle;
+  border-left:3.5px solid transparent;border-right:3.5px solid transparent;
+}
+.table th[data-dir="asc"]::after{border-bottom:4px solid currentColor}
+.table th[data-dir="desc"]::after{border-top:4px solid currentColor}

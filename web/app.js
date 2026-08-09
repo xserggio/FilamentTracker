@@ -6,7 +6,8 @@ const S = {
   brands: [], spoolTypes: ['plastic', 'cardboard', 'metal', 'other'],
   lang: 'en', view: 'dashboard',
   inv: { search: '', material: '', sort: 'name', lowOnly: false, stockOnly: false, archived: false },
-  his: { search: '', filament: '', from: '', to: '', failedOnly: false, group: '' },
+  his: { search: '', filament: '', from: '', to: '', failedOnly: false, group: '',
+         sort: 'date', dir: 'desc' },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
   mismatchTarget: null,
@@ -402,7 +403,9 @@ function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name', mate
 }
 
 function gotoHistory({ from = '', to = '', failedOnly = false, search = '', group = '' } = {}) {
-  S.his = { search, filament: '', from, to, failedOnly, group };
+  // the sort is not a filter: arriving from a tile changes what is shown, not
+  // the order it was asked for
+  S.his = { ...S.his, search, filament: '', from, to, failedOnly, group };
   $('#hisSearch').value = search; $('#hisFilament').value = '';
   $('#hisFrom').value = from; $('#hisTo').value = to;
   $('#hisFailed').checked = failedOnly;
@@ -788,6 +791,36 @@ function renderSpares() {
 }
 
 /* ---------- HISTORY ---------- */
+
+/* How each column compares, always ascending -- the direction is applied on
+   top. The date falls back to the id so that two prints on the same day keep
+   the order they were entered in rather than shuffling on every render. */
+const HIS_SORTS = {
+  date: (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id),
+  // by the name on the row, not by the group above it: sorting a column by
+  // something it does not show reads as broken, and the group has its own
+  // filter for when you want its prints together
+  project: (a, b) => a.project.localeCompare(
+    b.project, locale(), { sensitivity: 'base', numeric: true }),
+  // by how many colours it took, which is the only thing about a list of
+  // filaments that can be put in order
+  filaments: (a, b) => a.items.length - b.items.length,
+  total: (a, b) => a.total - b.total,
+  cost: (a, b) => (a.cost || 0) - (b.cost || 0),
+};
+
+/* Which way a column opens on the first click. Dates and amounts are asked
+   about from the top -- the biggest, the most recent -- and names from A. */
+const HIS_FIRST = { project: 'asc' };
+
+function sortHistory(key) {
+  const same = S.his.sort === key;
+  S.his.dir = same ? (S.his.dir === 'asc' ? 'desc' : 'asc')
+                   : (HIS_FIRST[key] || 'desc');
+  S.his.sort = key;
+  renderHistory();
+}
+
 function filteredPrints() {
   const q = S.his.search.toLowerCase();
   return S.prints.filter((p) => {
@@ -801,6 +834,9 @@ function filteredPrints() {
     if (S.his.to && p.date > S.his.to) return false;
     if (S.his.failedOnly && !p.failed) return false;
     return true;
+  }).sort((a, b) => {
+    const by = (HIS_SORTS[S.his.sort] || HIS_SORTS.date)(a, b);
+    return S.his.dir === 'asc' ? by : -by;
   });
 }
 
@@ -816,6 +852,14 @@ function renderHistory() {
   const btn = $('#hisGroupThese');
   btn.hidden = !list.length || list.length === S.prints.length;
   btn.textContent = t('his.groupThese', { n: list.length });
+
+  $$('#historyTable th[data-sort]').forEach((th) => {
+    const on = th.dataset.sort === S.his.sort;
+    if (on) th.dataset.dir = S.his.dir;
+    else delete th.dataset.dir;
+    th.setAttribute('aria-sort', on
+      ? (S.his.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
 
   // the cost column only earns its space once something has a price
   const showCost = !!S.stats.has_prices;
@@ -1116,7 +1160,10 @@ function renderStats() {
   // which is exact, instead of by a name that could also be a print's own
   const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
     label: p.project, value: p.grams, split: p.split,
-    sub: t('stats.prints', { n: p.prints }),
+    // what it weighed is on the bar; what it cost belongs next to how many
+    // prints it took, and only once something has a price
+    sub: t('stats.prints', { n: p.prints })
+      + (st.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
     action: () => gotoHistory(p.group_id
       ? { group: String(p.group_id) } : { search: p.project }),
   }));
@@ -1771,6 +1818,10 @@ function wire() {
   $('#hisTo').onchange = (e) => { S.his.to = e.target.value; renderHistory(); };
   $('#hisFailed').onchange = (e) => { S.his.failedOnly = e.target.checked; renderHistory(); };
   $('#hisGroup').onchange = (e) => { S.his.group = e.target.value; renderHistory(); };
+  $$('#historyTable th[data-sort]').forEach((th) => {
+    th.onclick = () => sortHistory(th.dataset.sort);
+    th.title = t('his.sortBy', { what: th.textContent.trim() });
+  });
   $('#hisGroupThese').onclick = () => groupThese(filteredPrints());
   $('#mmWeigh').onclick = () => {
     hide('#mismatchModal');
@@ -1783,7 +1834,8 @@ function wire() {
   $('#gSave').onclick = saveGroup;
   $('#gName').onkeydown = (e) => { if (e.key === 'Enter') saveGroup(); };
   $('#hisClear').onclick = () => {
-    S.his = { search: '', filament: '', from: '', to: '', failedOnly: false, group: '' };
+    S.his = { ...S.his, search: '', filament: '', from: '', to: '',
+              failedOnly: false, group: '' };
     $('#hisSearch').value = ''; $('#hisFilament').value = ''; $('#hisGroup').value = '';
     $('#hisFrom').value = ''; $('#hisTo').value = ''; $('#hisFailed').checked = false;
     renderHistory();

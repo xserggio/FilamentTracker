@@ -215,6 +215,12 @@ colores.
 En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
 **`!`**, uno de editar y otro de eliminar.
 
+Todas las cabeceras ordenan: pulsa **Total** para las impresiones más pesadas,
+**Coste** para las más caras, **Proyecto** para la A a la Z, **Filamentos** para
+las que llevaron más colores. Volver a pulsar la misma cabecera le da la vuelta,
+y la flecha dice qué columna manda. El orden sobrevive a quitar los filtros y a
+llegar desde un KPI del Panel, porque no es un filtro.
+
 ### Agrupar impresiones
 
 Una casa son veinte impresiones. En el historial cada una sigue siendo lo que es
@@ -446,6 +452,10 @@ queda en los rollos abiertos más los repuestos.
 Gramos por mes, filamentos más usados, reparto por material, proyectos que más
 consumen y material desperdiciado. Los KPIs del Panel y de aquí son clicables y te
 llevan a la vista correspondiente con los filtros ya puestos.
+
+*Proyectos que más consumen* dice también lo que costó cada uno, en cuanto algo
+tiene precio — los gramos son lo que gastaste, y el dinero suele ser lo que
+querías saber en realidad.
 
 ### Importar desde Excel
 

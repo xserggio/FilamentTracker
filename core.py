@@ -1689,10 +1689,21 @@ class Store:
         proj_split = split_by(NAME, NAME + ", f.id")
         proj_prints = {r["k"]: r["n"] for r in db.execute(
             "SELECT %s k, COUNT(*) n FROM prints p GROUP BY k" % NAME)}
+        # What a project cost is the sum of what its prints cost, each with the
+        # roll that was fitted the day it was printed. Working it out here and
+        # not in the query is what keeps that rule in one place.
+        all_costs = self.print_costs()
+        proj_cost = {}
+        if all_costs:
+            for r in db.execute("SELECT p.id, %s k FROM prints p" % NAME):
+                c = all_costs.get(r["id"])
+                if c:
+                    proj_cost[r["k"]] = proj_cost.get(r["k"], 0.0) + c
         top_projects = [
             {"project": r["gname"], "grams": round(r["g"], 2),
              "group_id": r["gid"],
              "prints": proj_prints.get(r["gname"], 0),
+             "cost": round(proj_cost.get(r["gname"], 0.0), 2),
              "split": proj_split.get(r["gname"], [])}
             for r in db.execute(
                 # the alias must not be "project": prints has a column by that
