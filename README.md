@@ -210,6 +210,12 @@ optional link to the model page, and notes. There is no four-colour limit.
 In the history, each row has a link button (if you saved a URL), a **`!`** button,
 an edit button and a delete button.
 
+Every heading sorts: click **Total** for the heaviest prints, **Cost** for the
+dearest, **Project** for A to Z, **Filaments** for the ones that took the most
+colours. Clicking the same heading again turns it round, and the arrow says
+which column is doing the sorting. The order survives clearing the filters and
+arriving from a tile on the Dashboard, because it is not a filter.
+
 ### Grouping prints
 
 A house is twenty prints. Each one is still its own thing in the history — a
