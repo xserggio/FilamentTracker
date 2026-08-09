@@ -456,6 +456,19 @@ The KPI tiles on the Dashboard and here are clickable and take you to the
 matching view with the filters already applied; one of them is what the drawer
 is worth, which is the number nobody wants to work out by hand.
 
+**Spend per month** is the same months in money, and it is not the same shape:
+a month of cheap black and a month of silk weigh the same and do not cost the
+same. The gap between the two charts is the reason to draw the second one, so
+its bars are split by cost too — shading a money bar by grams would hand the
+cheap filament the expensive one's share.
+
+**How long a spool lasts** does not wait for one to run out before saying
+anything. A roll half gone says as much: twenty days fitted and three hundred
+grams down is already a rate, so the roll on the printer counts alongside the
+ones it replaced. A material that has not used a tenth of a spool is left out —
+below that the arithmetic will happily report that a colour you tried once
+lasts two years.
+
 Every bar is made of the filaments that made it, so a project, a material, a
 Wednesday and a failure all draw from the same palette that is sitting in the
 drawer, and none of them needs an invented colour.
