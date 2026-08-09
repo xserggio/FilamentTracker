@@ -1103,16 +1103,20 @@ async function setAmsSlot(filamentId) {
    the drawer, and it turns a plain bar chart into a picture of what was
    printed. A black filament on a dark ground would be a hole in the bar, so
    every band carries a hairline. */
-function columns(data) {
+/* `money` draws the same shape in currency: the field is still called grams
+   because it is still the magnitude of the bar, and here that magnitude is
+   what the month cost. */
+function columns(data, opts = {}) {
   if (!data || !data.length) return `<div class="empty">${esc(t('stats.noData'))}</div>`;
+  const show = opts.money ? money : (v) => `${g(v)} g`;
   const max = Math.max(...data.map((d) => d.grams), 1);
   return `<div class="columns">${data.map((d) => {
     const split = (d.split || []).length ? d.split : [{ hex: '', name: '', grams: d.grams }];
-    return `<div class="col" title="${g(d.grams)} g · ${esc(t('stats.prints', { n: d.prints }))}">
-      <span class="cv">${g(d.grams)}</span>
+    return `<div class="col" title="${esc(show(d.grams))} · ${esc(t('stats.prints', { n: d.prints }))}">
+      <span class="cv">${esc(show(d.grams))}</span>
       <span class="stack"><span class="fill" style="height:${Math.max(3, (d.grams / max) * 100)}%">
         ${split.map((p) => `<i style="height:${(p.grams / d.grams) * 100}%;background:${
-          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name)} · ${g(p.grams)} g"></i>`).join('')}
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name)} · ${esc(show(p.grams))}"></i>`).join('')}
       </span></span>
       <span class="cl">${fmonth(d.month)}</span>
     </div>`;
@@ -1138,9 +1142,10 @@ function bars(rows, opts = {}) {
       </span>
       <span class="btrack"><span class="bt" style="width:${(r.value / max) * 100}%">
         ${split.map((p) => `<i style="width:${(p.grams / r.value) * 100}%;background:${
-          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name || '')} · ${g(p.grams)} g"></i>`).join('')}
+          esc(p.hex || 'var(--muted-2)')}" title="${esc(p.name || '')}"></i>`).join('')}
       </span></span>
-      <span class="bv">${g(r.value)} g<small>${g((r.value / total) * 100)} %</small></span>
+      <span class="bv">${opts.unit ? esc(opts.unit(r.value)) : `${g(r.value)} g`}${
+        opts.share === false ? '' : `<small>${g((r.value / total) * 100)} %</small>`}</span>
     </div>`;
   }).join('')}</div>`;
 
@@ -1191,6 +1196,9 @@ function renderStats() {
   ]);
 
   $('#chartMonths').innerHTML = columns(st.by_month || []);
+  // the same months in money, and only where there is money to show
+  $('#cardSpend').hidden = !st.has_prices;
+  if (st.has_prices) $('#chartSpend').innerHTML = columns(st.by_spend || [], { money: true });
 
   // a filament leads to its own sheet, which is where its whole story is
   const fil = (st.by_filament || []).slice(0, 12).map((f) => ({
@@ -1243,6 +1251,19 @@ function renderStats() {
     value: d.grams, split: d.split,
   }));
   $('#chartWeekday').innerHTML = bars(week);
+
+  // What runs out soonest first, which is the order you care about it in.
+  const life = (st.roll_life || []).map((r) => ({
+    label: r.material, value: r.days, split: r.split,
+    sub: t('stats.lifeSub', { n: r.rolls, rate: g(r.rate) }),
+    action: () => gotoInventory({ material: r.material }),
+  }));
+  $('#cardLife').hidden = !life.length;
+  $('#chartLife').innerHTML = bars(life, {
+    // a share of days adds up to nothing worth printing
+    share: false, unit: (v) => t('stats.days', { n: Math.round(v) }),
+  });
+  wireBars($('#chartLife'), life);
 }
 
 /* ---------- SETTINGS ---------- */
@@ -1896,6 +1917,16 @@ function wire() {
   $('#hisTo').onchange = (e) => { S.his.to = e.target.value; renderHistory(); };
   $('#hisFailed').onchange = (e) => { S.his.failedOnly = e.target.checked; renderHistory(); };
   $('#hisGroup').onchange = (e) => { S.his.group = e.target.value; renderHistory(); };
+
+  // The column headings stick underneath the filters, and the filters change
+  // height when they wrap. Measuring beats guessing, and beats hard-coding a
+  // number that is wrong in five of the six languages.
+  const bar = $('#view-history .toolbar');
+  // less the 22px it is pulled up by, which is what it actually covers
+  const measure = () => document.documentElement.style.setProperty(
+    '--bar-h', `${Math.round(bar.getBoundingClientRect().height) - 22}px`);
+  new ResizeObserver(measure).observe(bar);
+  measure();
   $$('#historyTable th[data-sort]').forEach((th) => {
     th.onclick = () => sortHistory(th.dataset.sort);
     th.title = t('his.sortBy', { what: th.textContent.trim() });
