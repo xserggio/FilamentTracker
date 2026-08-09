@@ -41,6 +41,8 @@ FILAMENTS = [
 PROJECTS = [
     ("Gridfinity 5x5 bins",      "https://gridfinity.xyz", 0),
     ("Gridfinity baseplate",     "", 0),
+    ("Gridfinity 2x2 bins",      "", 0),
+    ("Gridfinity label tabs",    "", 0),
     ("Desk cable clips",         "", 0),
     ("Headphone stand",          "", 0),
     ("Planter pot",              "", 0),
@@ -109,6 +111,11 @@ def main(path):
             "date": day, "project": project, "url": url,
             "failed": failed, "notes": "", "items": items,
         })
+
+    # Un grupo tambien en la muestra: un cajon Gridfinity son muchas
+    # impresiones y una sola cosa.
+    s.set_group([p["id"] for p in s.prints()
+                 if p["project"].startswith("Gridfinity")], "Gridfinity drawer")
 
     fils = {f["name"]: f for f in s.filaments()}
     print(f"{len(fils)} filamentos, {len(s.prints())} impresiones")

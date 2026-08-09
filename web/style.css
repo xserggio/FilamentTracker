@@ -470,6 +470,7 @@ tr:hover .row-actions{opacity:1}
 
 /* ============ forms ============ */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.form-grid .wide{grid-column:1 / -1}
 @media(max-width:620px){.form-grid{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:6px}
 .field > span{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.2px}
@@ -871,3 +872,16 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .alert .icon-btn.sm{color:var(--muted-2);transition:color .12s,background .12s}
 .alert:hover .icon-btn.sm{color:var(--muted)}
 .alert .icon-btn.sm:hover{color:var(--text);background:var(--hover-2)}
+
+/* the group a print belongs to, on its own line under the print's own name so
+   the rows do not go ragged when one name is long and the next is short */
+.proj-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;max-width:100%}
+.gchip{
+  display:inline-block;max-width:100%;padding:2px 8px;
+  border-radius:999px;border:1px solid var(--line-2);background:var(--surface-2);
+  font-family:var(--label);font-size:var(--t-xs);font-weight:500;color:var(--muted);
+  cursor:pointer;vertical-align:middle;
+  /* one line: a name broken in two turns the pill into a box */
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.gchip:hover{border-color:var(--line-3);color:var(--text)}

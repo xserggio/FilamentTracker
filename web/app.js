@@ -1,14 +1,14 @@
 /* Filament Tracker — interface */
 
 const S = {
-  filaments: [], prints: [], projects: [], stats: {}, settings: {}, dbPath: '',
+  filaments: [], prints: [], projects: [], groups: [], stats: {}, settings: {}, dbPath: '',
   dryDays: {}, materials: [], spoolTare: {}, backups: {},
   brands: [], spoolTypes: ['plastic', 'cardboard', 'metal', 'other'],
   lang: 'en', view: 'dashboard',
   inv: { search: '', material: '', sort: 'name', lowOnly: false, stockOnly: false, archived: false },
-  his: { search: '', filament: '', from: '', to: '', failedOnly: false },
+  his: { search: '', filament: '', from: '', to: '', failedOnly: false, group: '' },
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
-  failTarget: null, detailTarget: null, confirmFn: null,
+  failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
   ams: [], amsTarget: null,
 };
@@ -140,6 +140,7 @@ async function call(method, arg) {
 
 function absorb(d) {
   S.filaments = d.filaments; S.prints = d.prints; S.projects = d.projects;
+  S.groups = d.groups || [];
   S.stats = d.stats; S.settings = d.settings; S.dryDays = d.dry_days || {};
   S.materials = d.materials || []; S.dbPath = d.db_path;
   S.spoolTare = d.spool_tare || {}; S.backups = d.backups || {};
@@ -214,6 +215,15 @@ function fillSelects() {
   hf.innerHTML = `<option value="">${esc(t('his.allFilaments'))}</option>` +
     S.filaments.map((f) => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
   hf.value = S.his.filament;
+
+  $('#groupList').innerHTML = S.groups
+    .map((x) => `<option value="${esc(x.name)}">`).join('');
+  const gsel = $('#hisGroup');
+  const keep = S.his.group;
+  gsel.innerHTML = `<option value="">${esc(t('his.allGroups'))}</option>`
+    + `<option value="none">${esc(t('his.noGroup'))}</option>`
+    + S.groups.map((x) => `<option value="${x.id}">${esc(x.name)} · ${g(x.grams)} g</option>`).join('');
+  gsel.value = keep;
 
   $('#projectList').innerHTML = S.projects.map((p) => `<option value="${esc(p)}">`).join('');
   // the material list offers everything the app knows how to dry, not just what is in use
@@ -390,11 +400,12 @@ function gotoInventory({ lowOnly = false, stockOnly = false, sort = 'name', mate
   setView('inventory');
 }
 
-function gotoHistory({ from = '', to = '', failedOnly = false, search = '' } = {}) {
-  S.his = { search, filament: '', from, to, failedOnly };
+function gotoHistory({ from = '', to = '', failedOnly = false, search = '', group = '' } = {}) {
+  S.his = { search, filament: '', from, to, failedOnly, group };
   $('#hisSearch').value = search; $('#hisFilament').value = '';
   $('#hisFrom').value = from; $('#hisTo').value = to;
   $('#hisFailed').checked = failedOnly;
+  $('#hisGroup').value = group;
   setView('history');
 }
 
@@ -775,7 +786,11 @@ function renderSpares() {
 function filteredPrints() {
   const q = S.his.search.toLowerCase();
   return S.prints.filter((p) => {
-    if (q && !p.project.toLowerCase().includes(q)) return false;
+    // the group counts as part of the name: searching "casa UP" should find
+    // its pieces whatever each one happens to be called
+    if (q && !`${p.project} ${p.group_name || ''}`.toLowerCase().includes(q)) return false;
+    if (S.his.group === 'none' && p.group_name) return false;
+    if (S.his.group && S.his.group !== 'none' && String(p.group_id) !== S.his.group) return false;
     if (S.his.filament && !p.items.some((i) => i.filament_id == S.his.filament)) return false;
     if (S.his.from && p.date < S.his.from) return false;
     if (S.his.to && p.date > S.his.to) return false;
@@ -789,14 +804,25 @@ function renderHistory() {
   // nothing filtered, nothing to unfilter: the button only exists when it does
   // something, which also stops it reading as "clear the table"
   const h = S.his;
-  $('#hisClear').hidden = !(h.search || h.filament || h.from || h.to || h.failedOnly);
+  $('#hisClear').hidden = !(h.search || h.filament || h.from || h.to || h.failedOnly || h.group);
+  // "Group these N" acts on exactly what the filters are showing, which is why
+  // there are no checkboxes: searching "casa UP" already picks out the ten
+  // prints you meant, and the button says how many it is about to touch.
+  const btn = $('#hisGroupThese');
+  btn.hidden = !list.length || list.length === S.prints.length;
+  btn.textContent = t('his.groupThese', { n: list.length });
+
   // the cost column only earns its space once something has a price
   const showCost = !!S.stats.has_prices;
   $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
     <tr>
       <td class="date">${fdate(p.date)}</td>
-      <td class="proj" title="${esc(p.notes)}">${esc(p.project)}${failTag(p)}</td>
+      <td class="proj" title="${esc(p.notes)}">${esc(p.project)}${
+        (p.group_name || p.failed) ? `<span class="proj-tags">${
+          p.group_name ? `<span class="gchip" data-gid="${p.group_id}">${esc(p.group_name)}</span>` : ''
+        }${failTag(p)}</span>` : ''
+      }</td>
       <td><div class="fchips">${p.items.map(chip).join('')}</div></td>
       <td class="total right">${g(p.total)} g</td>
       <td class="cost right">${p.cost ? esc(money(p.cost)) : ''}</td>
@@ -820,6 +846,15 @@ function renderHistory() {
     : `<b>${esc(t('his.empty'))}</b>${esc(t('his.emptySub'))}`;
 
   $$('#historyTable td.cost').forEach((el) => { el.hidden = !showCost; });
+
+  $$('#historyTable [data-gid]').forEach((c) => {
+    c.onclick = (e) => {
+      e.stopPropagation();
+      S.his.group = c.dataset.gid;
+      $('#hisGroup').value = c.dataset.gid;
+      renderHistory();
+    };
+  });
 
   const find = (id) => S.prints.find((p) => p.id == id);
   $$('[data-pedit]').forEach((b) => { b.onclick = () => openPrint(find(b.dataset.pedit)); });
@@ -1072,11 +1107,13 @@ function renderStats() {
   $('#chartMaterials').innerHTML = bars(mat);
   wireBars($('#chartMaterials'), mat);
 
-  // a project leads to the history filtered to it
+  // a project leads to the history filtered to it -- by group when it is one,
+  // which is exact, instead of by a name that could also be a print's own
   const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
     label: p.project, value: p.grams, split: p.split,
     sub: t('stats.prints', { n: p.prints }),
-    action: () => gotoHistory({ search: p.project }),
+    action: () => gotoHistory(p.group_id
+      ? { group: String(p.group_id) } : { search: p.project }),
   }));
   $('#chartProjects').innerHTML = bars(proj);
   wireBars($('#chartProjects'), proj);
@@ -1227,12 +1264,39 @@ function sliceWhen(sl) {
   return when.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
 }
 
+/* Groups are made by naming one, not by creating an empty one first and
+   filling it later: the name is the only thing a group has. */
+function groupThese(list) {
+  if (!list.length) return;
+  S.grouping = list;
+  // if they are already all in the same group, the field starts on its name, so
+  // this doubles as the way to rename one or to add a print to it
+  const current = [...new Set(list.map((p) => p.group_name).filter(Boolean))];
+  $('#gCount').textContent = t('group.ask', { n: list.length });
+  $('#gName').value = current.length === 1 ? current[0] : '';
+  show('#groupModal');
+  $('#gName').focus();
+  $('#gName').select();
+}
+
+async function saveGroup() {
+  const list = S.grouping || [];
+  const name = $('#gName').value.trim();
+  const r = await call('set_group', { ids: list.map((p) => p.id), name });
+  if (failed(r)) return;
+  hide('#groupModal');
+  await reload();
+  toast(name ? t('toast.grouped', { n: list.length, name })
+             : t('toast.ungrouped', { n: list.length }));
+}
+
 /* ---------- MODAL: print ---------- */
 function openPrint(p) {
   S.editingPrint = p ? p.id : null;
   $('#printModalTitle').textContent = p ? t('print.edit') : t('print.new');
   $('#pDate').value = p ? p.date : todayISO();
   $('#pProject').value = p ? p.project : '';
+  $('#pGroup').value = p ? (p.group_name || '') : '';
   $('#pUrl').value = p ? (p.url || '') : '';
   $('#pNotes').value = p ? p.notes : '';
   $('#pFailed').checked = p ? !!p.failed : false;
@@ -1250,6 +1314,7 @@ function openPrintFromSlice(sl) {
   $('#printModalTitle').textContent = t('print.fromSlice');
   $('#pProject').value = sl.project || '';
   $('#pItems').innerHTML = '';
+  $('#pGroup').value = '';
   sl.items.forEach((i) => addItemRow(i.pick || '', i.grams, i));
   printTotal();
   hide('#sliceCard');
@@ -1314,6 +1379,7 @@ async function savePrint() {
   const res = await call('save_print', {
     id: S.editingPrint, date: $('#pDate').value || todayISO(),
     project: $('#pProject').value.trim(), url: $('#pUrl').value.trim(),
+    group: $('#pGroup').value.trim(),
     notes: $('#pNotes').value.trim(), failed: $('#pFailed').checked ? 1 : 0, items,
   });
   if (failed(res)) return;
@@ -1677,9 +1743,13 @@ function wire() {
   $('#hisFrom').onchange = (e) => { S.his.from = e.target.value; renderHistory(); };
   $('#hisTo').onchange = (e) => { S.his.to = e.target.value; renderHistory(); };
   $('#hisFailed').onchange = (e) => { S.his.failedOnly = e.target.checked; renderHistory(); };
+  $('#hisGroup').onchange = (e) => { S.his.group = e.target.value; renderHistory(); };
+  $('#hisGroupThese').onclick = () => groupThese(filteredPrints());
+  $('#gSave').onclick = saveGroup;
+  $('#gName').onkeydown = (e) => { if (e.key === 'Enter') saveGroup(); };
   $('#hisClear').onclick = () => {
-    S.his = { search: '', filament: '', from: '', to: '', failedOnly: false };
-    $('#hisSearch').value = ''; $('#hisFilament').value = '';
+    S.his = { search: '', filament: '', from: '', to: '', failedOnly: false, group: '' };
+    $('#hisSearch').value = ''; $('#hisFilament').value = ''; $('#hisGroup').value = '';
     $('#hisFrom').value = ''; $('#hisTo').value = ''; $('#hisFailed').checked = false;
     renderHistory();
   };

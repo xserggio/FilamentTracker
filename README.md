@@ -51,6 +51,8 @@ needs drying more often than PLA.
 - **Reads what Bambu Studio sliced.** Slice a plate and a card offers to log
   the print with the grams already filled in and a spool suggested per colour.
   You confirm; it remembers.
+- **Group prints into one project.** A house is twenty prints; group them and
+  the statistics count the house, while each piece keeps its own name.
 - **Statistics.** Grams per month, most used filaments, split by material, hungriest
   projects and wasted material.
 - **Excel import.** Bring across an existing spreadsheet in one go.
@@ -207,6 +209,35 @@ optional link to the model page, and notes. There is no four-colour limit.
 
 In the history, each row has a link button (if you saved a URL), a **`!`** button,
 an edit button and a delete button.
+
+### Grouping prints
+
+A house is twenty prints. Each one is still its own thing in the history — a
+chimney is a chimney — but you want the house to count as the house.
+
+A **group** sits above the project name and does not replace it. Filter the
+history until you are looking at what belongs together and press **Group these
+N**, which appears next to *Clear filters* and says exactly how many rows it is
+about to touch. Name the group and they are in it. There are no checkboxes
+because there is nothing to tick: searching *casa UP* has already picked out the
+right rows.
+
+<img src="docs/history.png" alt="History">
+
+What changes once prints are in a group:
+
+- **Statistics** counts the group instead of the individual prints, so
+  *Hungriest projects* shows the house at its real weight with the colours it
+  took, and clicking it filters the history to the group.
+- **Searching** the group's name finds its pieces, whatever each one is called.
+- The **All groups** dropdown filters the history to one group, or to what is in
+  none.
+- Each row shows a chip with the group's name; clicking it filters to that group.
+
+Nothing else moves. A print that is not in a group behaves exactly as before, and
+the group is only ever a name: emptying the field ungroups, and a group left with
+no prints in it disappears. The same **Group** field is in the print form, so a
+new print can be filed as you log it.
 
 ### After slicing in Bambu Studio
 
