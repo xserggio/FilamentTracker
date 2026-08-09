@@ -213,6 +213,10 @@ opening the form, which is a strange place to be put when all you did was ask
 what something was. The sheet has the group it belongs to, whether it failed,
 the notes and the link, and an **Edit** button for when you did mean the form.
 
+Sheets lead to sheets. The prints in a filament's sheet open theirs; a print's
+group opens the project's; a project's prints open theirs again. Whichever you
+opened last is the one on top, and closing it puts you back where you were.
+
 Each row also has, on hover, a link button (if you saved a URL), a **`!`**
 button, an edit button and a delete button.
 
@@ -481,7 +485,14 @@ drawer, and none of them needs an invented colour.
 
 *Hungriest projects* says what each one cost as well as what it weighed, once
 anything has a price — the grams are what you used, and the money is usually the
-part you were actually curious about.
+part you were actually curious about. **See all** opens the whole list rather
+than the eight the card has room for.
+
+A row opens that project's sheet: when it ran, what it weighed, what it cost,
+every colour that went into it and every print it is made of, each of those
+leading to its own sheet. A group and a plain project get the same sheet,
+because from the outside they are the same question. *See in history* on it
+does what the group tag in a history row does, which is filter the list.
 
 ### Importing from Excel
 
