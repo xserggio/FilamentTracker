@@ -158,11 +158,13 @@
           <label class="toggle"><input type="checkbox" id="hisFailed"><span data-i18n="his.failedOnly">Failed only</span></label>
           <button class="btn ghost sm" id="hisClear" data-i18n="his.clear">Clear</button>
           <button class="btn sm" id="hisGroupThese" hidden></button>
+          <button class="btn ghost sm" id="hisPickNone" hidden data-i18n="his.clearPicked">Clear selection</button>
         </div>
         <div class="card no-pad">
           <table class="table" id="historyTable">
             <thead>
-              <tr><th style="width:110px" data-sort="date" data-i18n="his.date">Date</th>
+              <tr><th class="pick-col"><input type="checkbox" class="tick" id="hisPickAll"></th>
+                  <th style="width:110px" data-sort="date" data-i18n="his.date">Date</th>
                   <th data-sort="project" data-i18n="his.project">Project</th>
                   <th data-sort="filaments" data-i18n="his.filaments">Filaments</th>
                   <th style="width:100px" class="right" data-sort="total" data-i18n="his.total">Total</th>

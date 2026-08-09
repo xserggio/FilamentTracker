@@ -221,12 +221,19 @@ arriving from a tile on the Dashboard, because it is not a filter.
 A house is twenty prints. Each one is still its own thing in the history — a
 chimney is a chimney — but you want the house to count as the house.
 
-A **group** sits above the project name and does not replace it. Filter the
-history until you are looking at what belongs together and press **Group these
-N**, which appears next to *Clear filters* and says exactly how many rows it is
-about to touch. Name the group and they are in it. There are no checkboxes
-because there is nothing to tick: searching *casa UP* has already picked out the
-right rows.
+A **group** sits above the project name and does not replace it. There are two
+ways to say which prints, because neither covers the other.
+
+**Filter, then group.** Narrow the history until you are looking at what belongs
+together and press **Group these N**, next to *Clear filters*. Searching *casa
+UP* has already picked out the right rows, and the button says exactly how many
+it is about to touch.
+
+**Or tick them.** Every row has a box, the heading has one for everything on
+screen, and holding **Shift** takes the whole range between two rows. Ticking
+wins over the filters when there is any, which is how you say *those five* — a
+thing no search can express. The selection is kept apart from the filters on
+purpose: search for one thing, tick two, search for another, tick two more.
 
 <img src="docs/history.png" alt="History">
 

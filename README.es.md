@@ -226,11 +226,18 @@ llegar desde un KPI del Panel, porque no es un filtro.
 Una casa son veinte impresiones. En el historial cada una sigue siendo lo que es
 —una chimenea es una chimenea—, pero quieres que la casa cuente como la casa.
 
-El **grupo** va por encima del nombre del proyecto y no lo sustituye. Filtra el
-historial hasta ver lo que va junto y pulsa **Agrupar estas N**, que aparece al
-lado de *Quitar filtros* y dice cuántas filas va a tocar. Le pones nombre y ya
-está. No hay casillas que marcar porque no hace falta: buscar *casa UP* ya ha
-dejado a la vista justo esas.
+El **grupo** va por encima del nombre del proyecto y no lo sustituye. Hay dos
+formas de decir qué impresiones, porque ninguna cubre a la otra.
+
+**Filtrar y agrupar.** Estrecha el historial hasta ver lo que va junto y pulsa
+**Agrupar estas N**, al lado de *Quitar filtros*. Buscar *casa UP* ya ha dejado
+a la vista justo esas, y el botón dice cuántas filas va a tocar.
+
+**O marcarlas.** Cada fila tiene su casilla, la cabecera tiene una para todo lo
+que se ve, y con **Mayús** se coge el rango entero entre dos filas. Si hay algo
+marcado, manda lo marcado por encima de los filtros: es la forma de decir *esas
+cinco*, que ninguna búsqueda sabe expresar. La selección va aparte de los
+filtros a propósito: buscas una cosa, marcas dos, buscas otra, marcas dos más.
 
 <img src="docs/history.png" alt="Historial">
 
