@@ -219,6 +219,11 @@ querías era saber qué era aquello. La ficha trae el grupo al que pertenece, si
 falló, las notas y el enlace, y un botón de **Editar** para cuando sí querías el
 formulario.
 
+Unas fichas llevan a otras. Las impresiones de la ficha de un filamento abren la
+suya; el grupo de una impresión abre la del proyecto; las impresiones de un
+proyecto abren la suya otra vez. La última que abriste es la que está encima, y
+al cerrarla vuelves donde estabas.
+
 Cada fila tiene además, al pasar por encima, un botón de enlace (si guardaste una
 URL), un botón **`!`**, uno de editar y otro de eliminar.
 
@@ -488,7 +493,14 @@ el cajón, y ninguno necesita un color inventado.
 
 *Proyectos que más consumen* dice también lo que costó cada uno, en cuanto algo
 tiene precio — los gramos son lo que gastaste, y el dinero suele ser lo que
-querías saber en realidad.
+querías saber en realidad. **Ver todos** abre la lista entera en vez de los ocho
+que caben en la tarjeta.
+
+Al pulsar una fila se abre la ficha de ese proyecto: cuándo fue, lo que pesó, lo
+que costó, cada color que entró en él y cada impresión de la que consta, y cada
+una de esas lleva a la suya. Un grupo y un proyecto a secas comparten ficha,
+porque desde fuera son la misma pregunta. El *Ver en el historial* de la ficha
+hace lo mismo que la etiqueta de grupo en una fila: filtrar la lista.
 
 ### Importar desde Excel
 
