@@ -450,9 +450,15 @@ open rolls plus the spares.
 
 <img src="docs/stats.png" alt="Statistics">
 
-Grams per month, most used filaments, split by material, hungriest projects and
-wasted material. The KPI tiles on the Dashboard and here are clickable and take you
-to the matching view with the filters already applied.
+Grams per month, most used filaments, split by material, hungriest projects,
+where the wasted material went, and by day of the week — each in its own card.
+The KPI tiles on the Dashboard and here are clickable and take you to the
+matching view with the filters already applied; one of them is what the drawer
+is worth, which is the number nobody wants to work out by hand.
+
+Every bar is made of the filaments that made it, so a project, a material, a
+Wednesday and a failure all draw from the same palette that is sitting in the
+drawer, and none of them needs an invented colour.
 
 *Hungriest projects* says what each one cost as well as what it weighed, once
 anything has a price — the grams are what you used, and the money is usually the

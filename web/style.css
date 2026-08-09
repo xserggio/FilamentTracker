@@ -256,7 +256,9 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;stroke
    says "these are four readings of the same thing" and gives the weight back
    to what matters. */
 .kpis{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  /* six tiles have to fit on one row at the default window width, or the
+     last one sits alone underneath and reads as a mistake */
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
   background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
   overflow:hidden;
 }
@@ -935,3 +937,7 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .tick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .table tr.picked{background:var(--hover)}
 .table tr.picked td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+
+/* An odd number of cards leaves one alone in the left column, which reads as a
+   mistake rather than as the end of the list. The last one takes the width. */
+.stats-grid > .card:last-child:nth-child(odd){grid-column:1 / -1}
