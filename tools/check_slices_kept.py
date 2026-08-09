@@ -116,6 +116,40 @@ check("no quedan copias huerfanas",
       len([f for f in os.listdir(s.slice_archive()) if f.endswith(".3mf")]), 1)
 
 
+# ------------------------------------------ tres placas y la app cerrada
+# El sondeo de la tarjeta pide una placa, y durante un tiempo eso fue tambien
+# todo lo que se guardaba: laminabas tres seguidas con la app cerrada, la
+# abrias, y las dos viejas seguian sin leer hasta que Bambu cerraba.
+import app as bridge  # noqa: E402
+
+cache2 = tempfile.mkdtemp()
+run2 = os.path.join(cache2, "Sun_Aug_09", "10_00_00#1#1", "Metadata")
+os.makedirs(run2)
+for n, gramos in ((1, 10.0), (2, 20.0), (3, 30.0)):
+    p = os.path.join(run2, ".1.%d_config.3mf" % n)
+    with zipfile.ZipFile(p, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("Metadata/slice_info.config",
+                   XML.replace('used_g="81.52"', 'used_g="%.2f"' % gramos)
+                      .replace("pieza.stl", "placa%d.stl" % n))
+        z.writestr("Metadata/project_settings.config",
+                   json.dumps({"filament_settings_id": ["Bambu PLA Matte @BBL A1"]}))
+
+s3 = Store(os.path.join(tempfile.mkdtemp(), "check3.db"))
+s3.set_settings({"slicer_dir": cache2, "slicer_watch": "1", "slicer_seen": "0"})
+api3 = bridge.Api.__new__(bridge.Api)
+api3._store = s3
+api3._window = None
+
+r = api3.slices({"limit": 1})            # lo que pide la tarjeta
+ofrecidas = len(r.get("data") or [])
+check("la tarjeta ofrece una", ofrecidas, 1)
+check("pero se guardan las tres", len(s3.stored_slices(limit=99)), 3)
+
+# Y volver a barrer no vuelve a abrir lo ya leido.
+antes = set(s3.known_slice_files())
+api3.slices({"limit": 1})
+check("nada nuevo que abrir", set(s3.known_slice_files()), antes)
+
 # --------------------------------------------- descartar sin fichero delante
 # Antes se hacia stat del fichero para saber hasta donde se habia mirado. Si ya
 # no estaba, el stat fallaba y se guardaba un cero -- que no significa "nada
