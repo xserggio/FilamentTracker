@@ -288,9 +288,15 @@ slice aside for the rest of the session and offers it again next launch; the
 **×** dismisses it for good. A slice you never printed is simply never confirmed.
 
 **View Bambu slices.** The card only offers the newest plate, and only once. In
-History, next to *New print*, **View Bambu slices** lists everything still in
-the folder — so one you put aside, or one sliced while the app was closed, can still
-be logged. It appears only if there is a folder with plates in it.
+History, next to *New print*, **View Bambu slices** lists every plate the app has
+read — so one you put aside, or one sliced while the app was closed, can still be
+logged. One you have already entered is marked *logged*.
+
+The list comes from what the app kept, not from what is in the folder now. That
+folder is Bambu Studio's scratch space: it writes a plate's figures there, does
+not always write them at all, and clears them when it likes. Reading a plate once
+and keeping it is what lets you notice mid-offer that the spool is empty, go and
+fit a new one, and come back to find the offer still waiting.
 
 **The folder.** Found on its own, and the same panel shows which one is in use
 and how many sliced plates are in it — so if the card never appears you can see
