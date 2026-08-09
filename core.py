@@ -1077,17 +1077,45 @@ class Store:
         except ValueError:
             units = 1
 
-        loaded = {(r["unit"], r["slot"]): r["filament_id"]
-                  for r in self.db.execute("SELECT unit, slot, filament_id FROM ams_slots")}
+        loaded = {(r["unit"], r["slot"]): (r["filament_id"], r["loaded_at"] or "")
+                  for r in self.db.execute(
+                      "SELECT unit, slot, filament_id, loaded_at FROM ams_slots")}
         by_id = {f["id"]: f for f in self.filaments()}
+
+        def cell(unit, slot, external=False):
+            fid, when = loaded.get((unit, slot), (None, ""))
+            return {"unit": unit, "slot": slot, "external": external,
+                    "loaded_at": when, "filament": by_id.get(fid)}
 
         out = []
         for unit in range(1, units + 1):
             for slot in range(1, self.AMS_SLOTS_PER_UNIT + 1):
-                out.append({"unit": unit, "slot": slot, "external": False,
-                            "filament": by_id.get(loaded.get((unit, slot)))})
-        out.append({"unit": self.EXTERNAL, "slot": 1, "external": True,
-                    "filament": by_id.get(loaded.get((self.EXTERNAL, 1)))})
+                out.append(cell(unit, slot))
+        out.append(cell(self.EXTERNAL, 1, external=True))
+        return out
+
+    def ams_by_plate_slot(self, before: str = "") -> dict:
+        """AMS contents keyed by the number a sliced plate uses for that slot.
+
+        Bambu Studio numbers a plate's filaments straight through the units, so
+        the second unit starts at 5. The external holder is left out: a plate
+        has no way of pointing at it, so nothing could be matched to it anyway.
+
+        `before` is the date of a slice, and it is what keeps a hand-kept tab
+        from lying about the past: a spool recorded as loaded *after* a plate
+        was sliced was not in that slot when it was sliced, so it is no
+        evidence about it. Loaded the same day counts -- fitting a spool and
+        slicing with it happen within minutes of each other, and the tab only
+        stores the day.
+        """
+        out = {}
+        for s in self.ams():
+            if s["external"] or not s["filament"]:
+                continue
+            if before and (s["loaded_at"] or "") > before[:10]:
+                continue
+            n = (s["unit"] - 1) * self.AMS_SLOTS_PER_UNIT + s["slot"]
+            out[n] = s["filament"]["id"]
         return out
 
     def set_ams_slot(self, unit: int, slot: int, filament_id=None):

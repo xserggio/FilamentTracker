@@ -306,10 +306,16 @@ class Api:
             out = []
             for sl in slicer.latest_slices(limit=int(data.get("limit") or 3),
                                            since=since, custom=folder):
+                # What the AMS tab says was loaded when this plate was sliced:
+                # a strong hint about which spool it used. Asked per slice
+                # rather than once, because a slot fitted after a plate was
+                # sliced says nothing about that plate.
+                loaded = s.ams_by_plate_slot(before=sl.get("sliced_at", ""))
                 for item in sl["items"]:
                     sig = slicer.signature(item)
                     item["signature"] = sig
-                    item.update(slicer.candidates(item, fils, s.recall_match(sig)))
+                    item.update(slicer.candidates(
+                        item, fils, s.recall_match(sig), loaded))
                 out.append(sl)
             return ok(out)
         except Exception as e:
