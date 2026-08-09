@@ -13,6 +13,7 @@ const S = {
   picked: new Set(), lastPick: null,
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
+  infoPrint: null,
   mismatchTarget: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
   ams: [], amsTarget: null,
@@ -880,7 +881,7 @@ function renderHistory() {
   const showCost = !!S.stats.has_prices;
   $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
-    <tr class="${S.picked.has(p.id) ? 'picked' : ''}">
+    <tr class="${S.picked.has(p.id) ? 'picked' : ''}" data-pinfo="${p.id}">
       <td class="pick-col"><input type="checkbox" class="tick" data-pick="${p.id}"
           ${S.picked.has(p.id) ? 'checked' : ''} title="${esc(t('his.pick'))}"></td>
       <td class="date">${fdate(p.date)}</td>
@@ -951,6 +952,16 @@ function renderHistory() {
       S.his.group = c.dataset.gid;
       $('#hisGroup').value = c.dataset.gid;
       renderHistory();
+    };
+  });
+
+  $$('#historyTable tr[data-pinfo]').forEach((tr) => {
+    tr.onclick = (e) => {
+      // the checkbox, the group chip and the row's own buttons all stop the
+      // click before it gets here; anything else on the row means "let me read
+      // this one"
+      if (e.target.closest('button, input, [data-gid]')) return;
+      openPrintInfo(S.prints.find((p) => p.id == tr.dataset.pinfo));
     };
   });
 
@@ -1123,6 +1134,30 @@ function columns(data, opts = {}) {
   }).join('')}</div>`;
 }
 
+/* A project leads to the history filtered to it -- by group when it is one,
+   which is exact, instead of by a name that could also be a print's own. */
+function projectRow(p) {
+  return {
+    label: p.project, value: p.grams, split: p.split,
+    // what it weighed is on the bar; what it cost belongs next to how many
+    // prints it took, and only once something has a price
+    sub: t('stats.prints', { n: p.prints })
+      + (S.stats.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
+    action: () => {
+      hide('#projectsModal');
+      gotoHistory(p.group_id ? { group: String(p.group_id) } : { search: p.project });
+    },
+  };
+}
+
+function openAllProjects() {
+  const rows = (S.stats.top_projects || []).map(projectRow);
+  $('#allProjectsCount').textContent = t('stats.allProjects', { n: rows.length });
+  $('#allProjectsList').innerHTML = bars(rows);
+  wireBars($('#allProjectsList'), rows);
+  show('#projectsModal');
+}
+
 /* Every bar is made of the filaments that made it, so none of them needs an
    invented colour: a material or a project is drawn from the same palette that
    is sitting in the drawer. And every row leads somewhere, because the obvious
@@ -1218,19 +1253,13 @@ function renderStats() {
   $('#chartMaterials').innerHTML = bars(mat);
   wireBars($('#chartMaterials'), mat);
 
-  // a project leads to the history filtered to it -- by group when it is one,
-  // which is exact, instead of by a name that could also be a print's own
-  const proj = (st.top_projects || []).slice(0, 8).map((p) => ({
-    label: p.project, value: p.grams, split: p.split,
-    // what it weighed is on the bar; what it cost belongs next to how many
-    // prints it took, and only once something has a price
-    sub: t('stats.prints', { n: p.prints })
-      + (st.has_prices && p.cost ? ` · ${money(p.cost)}` : ''),
-    action: () => gotoHistory(p.group_id
-      ? { group: String(p.group_id) } : { search: p.project }),
-  }));
+  const all = (st.top_projects || []).map(projectRow);
+  const proj = all.slice(0, 8);
   $('#chartProjects').innerHTML = bars(proj);
   wireBars($('#chartProjects'), proj);
+  // the card is the top of the list; the rest is a click away rather than a
+  // scrollbar inside a card
+  $('#allProjects').hidden = all.length <= proj.length;
 
   // Which model keeps failing is the one question about wasted material that
   // can be acted on -- the total only tells you it happened.
@@ -1451,6 +1480,36 @@ function openMismatch(f) {
   S.mismatchTarget = f;
   $('#mmWhat').textContent = t('mm.what', { name: f.name, n: g(f.over) });
   show('#mismatchModal');
+}
+
+/* Reading a print is not editing one. The history row is a summary -- date,
+   name, colours, total -- and the rest of what was recorded has until now been
+   reachable only by opening the form, which is a strange place to be put when
+   all you did was ask what something was. */
+function openPrintInfo(p) {
+  if (!p) return;
+  S.infoPrint = p;
+  $('#pinfoTitle').textContent = p.project;
+  const spec = (label, value) =>
+    `<span class="spec"><i>${esc(label)}</i><b>${esc(value)}</b></span>`;
+  $('#pinfoBody').innerHTML = `
+    <div class="pinfo-tags">
+      <span class="muted">${esc(fdate(p.date))}</span>
+      ${p.group_name ? `<span class="gchip">${esc(p.group_name)}</span>` : ''}
+      ${failTag(p)}
+    </div>
+    <h3 class="sub-head">${esc(t('print.items'))}</h3>
+    <div class="fchips">${p.items.map(chip).join('')}</div>
+    <div class="pinfo-specs">
+      ${spec(t('his.total'), `${g(p.total)} g`)}
+      ${p.cost ? spec(t('his.cost'), money(p.cost)) : ''}
+    </div>
+    ${p.notes ? `<div class="pinfo-note">${esc(p.notes)}</div>` : ''}
+    ${p.url ? `<a class="pinfo-link" href="#" id="pinfoLink">${svg('link')}${
+      esc(t('his.openLink'))}</a>` : ''}`;
+  const link = $('#pinfoLink');
+  if (link) link.onclick = (e) => { e.preventDefault(); call('open_url', p.url); };
+  show('#pinfoModal');
 }
 
 /* ---------- MODAL: print ---------- */
@@ -1934,6 +1993,11 @@ function wire() {
   $('#hisGroupThese').onclick = () => groupThese(
     S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : filteredPrints());
   $('#hisPickNone').onclick = clearPicked;
+  $('#allProjects').onclick = openAllProjects;
+  $('#pinfoEdit').onclick = () => {
+    hide('#pinfoModal');
+    openPrint(S.infoPrint);
+  };
   $('#mmWeigh').onclick = () => {
     hide('#mismatchModal');
     openRoll(S.mismatchTarget, 'adjust');

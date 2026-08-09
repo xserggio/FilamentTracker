@@ -1750,7 +1750,9 @@ class Store:
                 "SELECT %s AS gname, MAX(p.group_id) gid, "
                 "COALESCE(SUM(pi.grams),0) g FROM prints p "
                 "JOIN print_items pi ON pi.print_id = p.id "
-                "GROUP BY gname ORDER BY g DESC LIMIT 12" % NAME
+                # no limit: the card shows the first handful and "see all"
+                # shows the rest, and the rest is what a limit here would eat
+                "GROUP BY gname ORDER BY g DESC" % NAME
             )
         ]
         # Every bar in this app is made of the filaments that made it, so this

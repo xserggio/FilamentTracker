@@ -212,8 +212,15 @@ colores.
 
 <img src="docs/history.png" alt="Historial">
 
-En el historial, cada fila tiene un botón de enlace (si guardaste una URL), un botón
-**`!`**, uno de editar y otro de eliminar.
+Pulsa una fila para leerla. Lo que enseña el historial es un resumen —fecha,
+nombre, colores, total— y el resto de lo que apuntaste solo se alcanzaba
+abriendo el formulario, que es un sitio raro donde acabar cuando lo único que
+querías era saber qué era aquello. La ficha trae el grupo al que pertenece, si
+falló, las notas y el enlace, y un botón de **Editar** para cuando sí querías el
+formulario.
+
+Cada fila tiene además, al pasar por encima, un botón de enlace (si guardaste una
+URL), un botón **`!`**, uno de editar y otro de eliminar.
 
 Todas las cabeceras ordenan: pulsa **Total** para las impresiones más pesadas,
 **Coste** para las más caras, **Proyecto** para la A a la Z, **Filamentos** para
