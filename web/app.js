@@ -8,6 +8,9 @@ const S = {
   inv: { search: '', material: '', sort: 'name', lowOnly: false, stockOnly: false, archived: false },
   his: { search: '', filament: '', from: '', to: '', failedOnly: false, group: '',
          sort: 'date', dir: 'desc' },
+  // prints picked by hand, by id. Kept apart from the filters on purpose: you
+  // search for one thing, tick two, search for another, tick two more.
+  picked: new Set(), lastPick: null,
   editingPrint: null, editingFilament: null, rollTarget: null, sparesTarget: null,
   failTarget: null, detailTarget: null, confirmFn: null, grouping: [],
   mismatchTarget: null,
@@ -840,18 +843,30 @@ function filteredPrints() {
   });
 }
 
+const byPrintId = (id) => S.prints.find((p) => p.id === id);
+
+function clearPicked() {
+  S.picked.clear();
+  S.lastPick = null;
+  renderHistory();
+}
+
 function renderHistory() {
   const list = filteredPrints();
   // nothing filtered, nothing to unfilter: the button only exists when it does
   // something, which also stops it reading as "clear the table"
   const h = S.his;
   $('#hisClear').hidden = !(h.search || h.filament || h.from || h.to || h.failedOnly || h.group);
-  // "Group these N" acts on exactly what the filters are showing, which is why
-  // there are no checkboxes: searching "casa UP" already picks out the ten
-  // prints you meant, and the button says how many it is about to touch.
+  // Two ways to say which prints, because neither covers the other. Filters
+  // are how you say "the ten with casa UP in the name"; ticking is how you say
+  // "those five", which no filter can express. Ticking wins when there is any,
+  // and the button always says how many it is about to touch.
+  const target = S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : list;
   const btn = $('#hisGroupThese');
-  btn.hidden = !list.length || list.length === S.prints.length;
-  btn.textContent = t('his.groupThese', { n: list.length });
+  btn.hidden = !target.length
+    || (!S.picked.size && list.length === S.prints.length);
+  btn.textContent = t('his.groupThese', { n: target.length });
+  $('#hisPickNone').hidden = !S.picked.size;
 
   $$('#historyTable th[data-sort]').forEach((th) => {
     const on = th.dataset.sort === S.his.sort;
@@ -865,7 +880,9 @@ function renderHistory() {
   const showCost = !!S.stats.has_prices;
   $$('#historyTable .cost-col').forEach((el) => { el.hidden = !showCost; });
   $('#historyTable tbody').innerHTML = list.map((p) => `
-    <tr>
+    <tr class="${S.picked.has(p.id) ? 'picked' : ''}">
+      <td class="pick-col"><input type="checkbox" class="tick" data-pick="${p.id}"
+          ${S.picked.has(p.id) ? 'checked' : ''} title="${esc(t('his.pick'))}"></td>
       <td class="date">${fdate(p.date)}</td>
       <td class="proj" title="${esc(p.notes)}">${esc(p.project)}${
         (p.group_name || p.failed) ? `<span class="proj-tags">${
@@ -895,6 +912,38 @@ function renderHistory() {
     : `<b>${esc(t('his.empty'))}</b>${esc(t('his.emptySub'))}`;
 
   $$('#historyTable td.cost').forEach((el) => { el.hidden = !showCost; });
+
+  const all = $('#hisPickAll');
+  const on = list.filter((p) => S.picked.has(p.id)).length;
+  all.checked = on > 0 && on === list.length;
+  all.indeterminate = on > 0 && on < list.length;
+  all.title = t('his.pickAll');
+  all.onclick = () => {
+    // the heading picks what is on screen, never what a filter is hiding
+    list.forEach((p) => (all.checked ? S.picked.add(p.id) : S.picked.delete(p.id)));
+    renderHistory();
+  };
+
+  $$('#historyTable [data-pick]').forEach((c) => {
+    c.onclick = (e) => {
+      e.stopPropagation();
+      const id = Number(c.dataset.pick);
+      // shift takes everything between this row and the last one ticked, which
+      // is what every list of things has done for thirty years
+      if (e.shiftKey && S.lastPick != null) {
+        const ids = list.map((p) => p.id);
+        const a = ids.indexOf(S.lastPick);
+        const b = ids.indexOf(id);
+        if (a > -1 && b > -1) {
+          ids.slice(Math.min(a, b), Math.max(a, b) + 1)
+            .forEach((x) => (c.checked ? S.picked.add(x) : S.picked.delete(x)));
+        }
+      } else if (c.checked) S.picked.add(id);
+      else S.picked.delete(id);
+      S.lastPick = id;
+      renderHistory();
+    };
+  });
 
   $$('#historyTable [data-gid]').forEach((c) => {
     c.onclick = (e) => {
@@ -1338,6 +1387,10 @@ async function saveGroup() {
   const r = await call('set_group', { ids: list.map((p) => p.id), name });
   if (failed(r)) return;
   hide('#groupModal');
+  // the picking was for this; keeping it would leave rows ticked for a job
+  // already done
+  S.picked.clear();
+  S.lastPick = null;
   await reload();
   toast(name ? t('toast.grouped', { n: list.length, name })
              : t('toast.ungrouped', { n: list.length }));
@@ -1822,7 +1875,9 @@ function wire() {
     th.onclick = () => sortHistory(th.dataset.sort);
     th.title = t('his.sortBy', { what: th.textContent.trim() });
   });
-  $('#hisGroupThese').onclick = () => groupThese(filteredPrints());
+  $('#hisGroupThese').onclick = () => groupThese(
+    S.picked.size ? [...S.picked].map(byPrintId).filter(Boolean) : filteredPrints());
+  $('#hisPickNone').onclick = clearPicked;
   $('#mmWeigh').onclick = () => {
     hide('#mismatchModal');
     openRoll(S.mismatchTarget, 'adjust');
