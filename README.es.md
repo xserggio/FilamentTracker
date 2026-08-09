@@ -462,6 +462,19 @@ cosa en su tarjeta. Los KPIs del Panel y de aquí son clicables y te llevan a la
 vista correspondiente con los filtros ya puestos; uno de ellos es lo que vale el
 cajón, que es la cuenta que nadie quiere hacer a mano.
 
+**Gasto por mes** son los mismos meses en dinero, y no tienen la misma forma: un
+mes de negro barato y un mes de silk pesan igual y no cuestan igual. La
+diferencia entre los dos gráficos es justo la razón de dibujar el segundo, así
+que sus barras también se reparten por coste — colorear una barra de dinero con
+los gramos le daría al filamento barato la parte del caro.
+
+**Lo que dura un rollo** no espera a que se acabe uno para decir algo. Un rollo a
+medias informa igual: veinte días puesto y trescientos gramos menos ya es un
+ritmo, así que el rollo que está en la impresora cuenta junto a los que
+sustituyó. Un material que no ha gastado ni un décimo de bobina se queda fuera:
+por debajo de eso la aritmética te dirá tan tranquila que un color que probaste
+una vez te dura dos años.
+
 Cada barra está hecha de los filamentos que la hicieron, así que un proyecto, un
 material, un miércoles y una fallida beben todos de la misma paleta que tienes en
 el cajón, y ninguno necesita un color inventado.

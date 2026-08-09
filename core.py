@@ -1621,6 +1621,7 @@ class Store:
 
     def stats(self) -> dict:
         db = self.db
+        costs = self.print_costs()
         by_month = [
             {"month": r["m"], "grams": round(r["g"], 2), "prints": r["n"]}
             for r in db.execute(
@@ -1644,6 +1645,42 @@ class Store:
                 {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
         for entry in by_month:
             entry["split"] = splits.get(entry["month"], [])
+
+        # The same months in money. Not the same shape as the grams: a month of
+        # cheap black and a month of silk weigh the same and do not cost the
+        # same, and the gap between the two charts is the whole reason to draw
+        # the second one.
+        #
+        # Worked out per colour rather than per print, because the split has to
+        # be in money too -- shading a money bar by grams would put the cheap
+        # filament in charge of the expensive one's share.
+        index = self._price_index()
+        spend, spend_split = {}, {}
+        if any(rate for rolls in index.values() for _, rate in rolls):
+            for r in db.execute(
+                "SELECT p.date, pi.filament_id fid, pi.grams, f.name, f.hex "
+                "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+                "JOIN filaments f ON f.id = pi.filament_id"
+            ):
+                c = self._cost_of(index, r["fid"], r["date"], float(r["grams"]))
+                if not c:
+                    continue
+                m = r["date"][:7]
+                spend[m] = spend.get(m, 0.0) + c
+                by_fil = spend_split.setdefault(m, {})
+                if r["fid"] in by_fil:
+                    by_fil[r["fid"]]["grams"] += c
+                else:
+                    by_fil[r["fid"]] = {"name": r["name"], "hex": r["hex"], "grams": c}
+        by_spend = [
+            {"month": e["month"], "grams": round(spend.get(e["month"], 0.0), 2),
+             "prints": e["prints"],
+             "split": sorted(
+                 ({"name": v["name"], "hex": v["hex"], "grams": round(v["grams"], 4)}
+                  for v in spend_split.get(e["month"], {}).values()),
+                 key=lambda x: -x["grams"])}
+            for e in by_month
+        ]
 
         by_filament = [
             {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2), "prints": r["n"]}
@@ -1692,8 +1729,8 @@ class Store:
         # What a project cost is the sum of what its prints cost, each with the
         # roll that was fitted the day it was printed. Working it out here and
         # not in the query is what keeps that rule in one place.
-        all_costs = self.print_costs()
         proj_cost = {}
+        all_costs = costs
         if all_costs:
             for r in db.execute("SELECT p.id, %s k FROM prints p" % NAME):
                 c = all_costs.get(r["id"])
@@ -1759,14 +1796,58 @@ class Store:
         ]
 
         fils = self.filaments()
+
+        # How long a spool of each material lasts. Waiting for one to run out
+        # before saying anything leaves this empty for weeks -- and with one
+        # finished roll in the whole database it would be a single number
+        # pretending to be an average. A roll half gone says as much: twenty
+        # days fitted and three hundred grams down is already a rate, so the
+        # roll on the printer counts alongside the ones it replaced.
+        life = {}
+        for f in fils:
+            if f["archived"]:
+                continue
+            for r in self.roll_history(f["id"]):
+                if (r["days"] or 0) < 1 or r["used"] <= 0:
+                    continue
+                d = life.setdefault(f["material"], {
+                    "days": 0, "used": 0.0, "rolls": 0, "weight": 0.0})
+                d["days"] += r["days"]
+                d["used"] += r["used"]
+                d["rolls"] += 1
+                d["weight"] += r["weight"]
+        roll_life = []
+        for material, d in life.items():
+            weight = d["weight"] / d["rolls"]
+            # A tenth of a spool is the least that can be called a rate. Below
+            # that this would report that a colour tried once lasts two years,
+            # which is true of the arithmetic and not of anything else.
+            if d["used"] < weight * 0.1:
+                continue
+            rate = d["used"] / d["days"]
+            days = weight / rate
+            share = mat_split.get(material, [])
+            total = sum(x["grams"] for x in share) or 1
+            roll_life.append({
+                "material": material, "days": round(days, 1),
+                "rate": round(rate, 2), "rolls": d["rolls"],
+                "weight": round(weight),
+                # the colours of that material, scaled to the bar it draws
+                "split": [{"name": x["name"], "hex": x["hex"],
+                           "grams": round(days * x["grams"] / total, 3)}
+                          for x in share],
+            })
+        roll_life.sort(key=lambda x: x["days"])
+
         month = date.today().strftime("%Y-%m")
-        costs = self.print_costs()
         dates = {r["id"]: r["date"] for r in db.execute("SELECT id, date FROM prints")}
         failed_ids = {r["id"] for r in db.execute("SELECT id FROM prints WHERE failed = 1")}
         this_month = next((m for m in by_month if m["month"] == month), {"grams": 0, "prints": 0})
 
         return {
             "by_month": by_month,
+            "by_spend": by_spend,
+            "roll_life": roll_life,
             "by_filament": by_filament,
             "by_material": by_material,
             "top_projects": top_projects,
