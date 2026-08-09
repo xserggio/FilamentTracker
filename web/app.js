@@ -1179,6 +1179,11 @@ function renderStats() {
       foot: t('kpi.spentFoot', { v: money(st.month_cost) }), hint: t('kpi.hint.spent'),
       action: () => gotoHistory(),
     }] : []),
+    ...(st.has_prices && st.stock_value ? [{
+      label: t('kpi.stock'), value: money(st.stock_value), icon: 'boxes',
+      foot: t('kpi.stockFoot', { kg: kg(st.available_g || 0) }),
+      hint: t('kpi.hint.inventory'), action: () => gotoInventory(),
+    }] : []),
     { label: t('kpi.filaments'), value: String(st.n_filaments || 0), icon: 'palette',
       tone: st.n_low ? 'warn' : 'ok', foot: t('kpi.filamentsFoot', { n: st.n_low || 0 }),
       hint: st.n_low ? t('kpi.hint.low') : t('kpi.hint.inventory'),
@@ -1218,6 +1223,26 @@ function renderStats() {
   }));
   $('#chartProjects').innerHTML = bars(proj);
   wireBars($('#chartProjects'), proj);
+
+  // Which model keeps failing is the one question about wasted material that
+  // can be acted on -- the total only tells you it happened.
+  const fails = (st.worst_failures || []).map((f) => ({
+    label: f.project, value: f.grams, split: f.split,
+    sub: t('stats.failedN', { n: f.n }),
+    action: () => gotoHistory({ failedOnly: true, search: f.project }),
+  }));
+  $('#chartFails').innerHTML = bars(fails);
+  wireBars($('#chartFails'), fails);
+
+  // Day names from the system rather than from the translations: it already
+  // knows them in every language, and 2024-01-07 was a Sunday, which is where
+  // SQLite's %w starts counting.
+  const dayName = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
+  const week = (st.by_weekday || []).map((d, i) => ({
+    label: dayName.format(new Date(2024, 0, 7 + i)),
+    value: d.grams, split: d.split,
+  }));
+  $('#chartWeekday').innerHTML = bars(week);
 }
 
 /* ---------- SETTINGS ---------- */

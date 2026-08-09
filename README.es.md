@@ -457,8 +457,14 @@ queda en los rollos abiertos más los repuestos.
 <img src="docs/stats.png" alt="Estadísticas">
 
 Gramos por mes, filamentos más usados, reparto por material, proyectos que más
-consumen y material desperdiciado. Los KPIs del Panel y de aquí son clicables y te
-llevan a la vista correspondiente con los filtros ya puestos.
+consumen, a dónde se fue lo desperdiciado y reparto por día de la semana — cada
+cosa en su tarjeta. Los KPIs del Panel y de aquí son clicables y te llevan a la
+vista correspondiente con los filtros ya puestos; uno de ellos es lo que vale el
+cajón, que es la cuenta que nadie quiere hacer a mano.
+
+Cada barra está hecha de los filamentos que la hicieron, así que un proyecto, un
+material, un miércoles y una fallida beben todos de la misma paleta que tienes en
+el cajón, y ninguno necesita un color inventado.
 
 *Proyectos que más consumen* dice también lo que costó cada uno, en cuanto algo
 tiene precio — los gramos son lo que gastaste, y el dinero suele ser lo que

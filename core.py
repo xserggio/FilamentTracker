@@ -1716,12 +1716,16 @@ class Store:
                 "GROUP BY gname ORDER BY g DESC LIMIT 12" % NAME
             )
         ]
-        by_weekday = [0.0] * 7
+        # Every bar in this app is made of the filaments that made it, so this
+        # one carries its colours too rather than being a grey stub.
+        DOW = "CAST(strftime('%w', p.date) AS INTEGER)"
+        dow_split = split_by(DOW, DOW + ", f.id")
+        by_weekday = [{"grams": 0.0, "split": dow_split.get(i, [])} for i in range(7)]
         for r in db.execute(
-            "SELECT CAST(strftime('%w', p.date) AS INTEGER) w, COALESCE(SUM(pi.grams),0) g "
-            "FROM prints p JOIN print_items pi ON pi.print_id = p.id GROUP BY w"
+            "SELECT %s w, COALESCE(SUM(pi.grams),0) g "
+            "FROM prints p JOIN print_items pi ON pi.print_id = p.id GROUP BY w" % DOW
         ):
-            by_weekday[r["w"]] = round(r["g"], 2)
+            by_weekday[r["w"]]["grams"] = round(r["g"], 2)
 
         tot = db.execute(
             "SELECT COUNT(DISTINCT p.id) n, COALESCE(SUM(pi.grams),0) g, "
@@ -1732,8 +1736,21 @@ class Store:
             "SELECT COUNT(DISTINCT p.id) n, COALESCE(SUM(pi.grams),0) g FROM prints p "
             "LEFT JOIN print_items pi ON pi.print_id = p.id WHERE p.failed = 1"
         ).fetchone()
+        # Which colours a failure ate, not only how much: a run of failures on
+        # the one spool you are short of is a different problem from the same
+        # grams spread over everything.
+        fail_split = {}
+        for r in db.execute(
+            "SELECT p.project k, f.name, f.hex, COALESCE(SUM(pi.grams),0) g "
+            "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
+            "JOIN filaments f ON f.id = pi.filament_id "
+            "WHERE p.failed = 1 GROUP BY p.project, f.id ORDER BY g DESC"
+        ):
+            fail_split.setdefault(r["k"], []).append(
+                {"name": r["name"], "hex": r["hex"], "grams": round(r["g"], 2)})
         worst_fail = [
-            {"project": r["project"], "grams": round(r["g"], 2), "n": r["n"]}
+            {"project": r["project"], "grams": round(r["g"], 2), "n": r["n"],
+             "split": fail_split.get(r["project"], [])}
             for r in db.execute(
                 "SELECT p.project, COALESCE(SUM(pi.grams),0) g, COUNT(DISTINCT p.id) n "
                 "FROM prints p JOIN print_items pi ON pi.print_id = p.id "
