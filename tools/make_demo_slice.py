@@ -63,7 +63,13 @@ def main(root):
         "object": OBJECT,
         "filaments": "\n".join(FILAMENT % f for f in PLATE),
     }
-    settings = {"filament_settings_id": [f["profile"] for f in PLATE]}
+    # un perfil por hueco del printer, no por filamento usado: asi es como
+    # lo escribe Bambu Studio, y es lo que hace que el numero de hueco importe
+    slots = {}
+    for f in PLATE:
+        slots[f["id"]] = f["profile"]
+    settings = {"filament_settings_id": [slots.get(i + 1, "Bambu PLA Basic @BBL A1")
+                                         for i in range(max(slots))]}
 
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("Metadata/slice_info.config", xml)
