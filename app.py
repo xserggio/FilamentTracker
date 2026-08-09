@@ -49,6 +49,7 @@ class Api:
                     "filaments": s.filaments(),
                     "prints": s.prints(),
                     "projects": s.projects(),
+                    "groups": s.groups(),
                     "stats": s.stats(),
                     "settings": s.get_settings(),
                     "dry_days": s.dry_days(),
@@ -79,6 +80,7 @@ class Api:
                         date_to=payload.get("date_to", ""),
                     ),
                     "projects": s.projects(),
+                    "groups": s.groups(),
                     "stats": s.stats(),
                     "settings": s.get_settings(),
                     "dry_days": s.dry_days(),
@@ -247,6 +249,17 @@ class Api:
                         "hex": r["filament"]["hex"], "delta": r["delta"],
                         "same_material": r["same_material"]} for r in res[:8]])
         except Exception as e:
+            return err(e)
+
+    # ---------- groups ----------
+
+    def set_group(self, data):
+        """Put a set of prints in a group, or take them out of one."""
+        try:
+            self._store.set_group(data.get("ids") or [], data.get("name") or "")
+            return ok()
+        except Exception as e:
+            traceback.print_exc()
             return err(e)
 
     # ---------- the AMS ----------

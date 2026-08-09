@@ -94,6 +94,16 @@ CREATE TABLE IF NOT EXISTS settings (
     value         TEXT NOT NULL
 );
 
+-- A handful of prints that are really one thing: a house is a chimney and a
+-- roof and a dozen balloons. The name on a print stays what it is -- plenty of
+-- prints are a whole project on their own -- and the group sits above it,
+-- optional, for the ones that are pieces of something bigger.
+CREATE TABLE IF NOT EXISTS groups (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL UNIQUE,
+    created_at    TEXT NOT NULL DEFAULT ''
+);
+
 -- Which spool is in which AMS slot right now. A slot is identified by its
 -- unit and position rather than by a row id, so the layout can grow or shrink
 -- with the printer without renumbering anything. An empty slot is simply a row
@@ -373,6 +383,13 @@ class Store:
 
     def _migrate(self):
         """Adds new columns to databases created by earlier versions."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(prints)")}
+        if "group_id" not in cols:
+            self.db.execute(
+                "ALTER TABLE prints ADD COLUMN group_id INTEGER "
+                "REFERENCES groups(id) ON DELETE SET NULL")
+            self.db.commit()
+
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(rolls)")}
         if "brand" not in cols:
             self.db.execute("ALTER TABLE rolls ADD COLUMN brand TEXT NOT NULL DEFAULT ''")
@@ -999,6 +1016,51 @@ class Store:
             for r in rows
         ]
 
+    # ---------- groups: several prints that are one thing ----------
+
+    def group_id_for(self, name: str):
+        """The id of a group by name, made on the spot if it is new."""
+        name = (name or "").strip()
+        if not name:
+            return None
+        row = self.db.execute(
+            "SELECT id FROM groups WHERE name = ? COLLATE NOCASE", (name,)).fetchone()
+        if row:
+            return row["id"]
+        cur = self.db.execute(
+            "INSERT INTO groups(name, created_at) VALUES(?,?)", (name, now()))
+        self.db.commit()
+        return cur.lastrowid
+
+    def groups(self) -> list:
+        """Every group with what it has cost so far."""
+        return [dict(r) for r in self.db.execute(
+            "SELECT g.id, g.name, COUNT(DISTINCT p.id) prints, "
+            "COALESCE(SUM(pi.grams),0) grams, MIN(p.date) first, MAX(p.date) last "
+            "FROM groups g "
+            "LEFT JOIN prints p ON p.group_id = g.id "
+            "LEFT JOIN print_items pi ON pi.print_id = p.id "
+            "GROUP BY g.id ORDER BY grams DESC, g.name COLLATE NOCASE")]
+
+    def set_group(self, print_ids, name):
+        """Put these prints in a group, or take them out of whatever they were in.
+
+        An empty name ungroups. Groups left with nothing in them are dropped:
+        a group is only ever a way of holding prints together, so an empty one
+        is not a thing anybody wants to see in a list.
+        """
+        gid = self.group_id_for(name) if (name or "").strip() else None
+        ids = [int(x) for x in (print_ids or [])]
+        if ids:
+            marks = ",".join("?" * len(ids))
+            self.db.execute(
+                "UPDATE prints SET group_id = ? WHERE id IN (%s)" % marks, [gid] + ids)
+        self.db.execute(
+            "DELETE FROM groups WHERE id NOT IN (SELECT DISTINCT group_id FROM prints "
+            "WHERE group_id IS NOT NULL)")
+        self.db.commit()
+        return gid
+
     # ---------- what is loaded in the AMS ----------
 
     AMS_SLOTS_PER_UNIT = 4
@@ -1189,8 +1251,9 @@ class Store:
     # ---------- prints ----------
 
     def prints(self, limit: int = None, search: str = "", filament_id: int = None,
-               date_from: str = "", date_to: str = "") -> list:
-        sql = "SELECT p.* FROM prints p"
+               date_from: str = "", date_to: str = "", group_id: int = None) -> list:
+        sql = "SELECT p.*, g.name AS group_name FROM prints p "\
+              "LEFT JOIN groups g ON g.id = p.group_id"
         args = []
         where = []
         if filament_id:
@@ -1198,8 +1261,14 @@ class Store:
             where.append("pi.filament_id = ?")
             args.append(filament_id)
         if search:
-            where.append("p.project LIKE ?")
-            args.append(f"%{search}%")
+            # the group counts as part of the name for searching: looking for
+            # "casa UP" should find its pieces whatever each one is called
+            where.append("(p.project LIKE ? OR g.name LIKE ?)")
+            args += [f"%{search}%", f"%{search}%"]
+        if group_id is not None:
+            where.append("p.group_id = ?" if group_id else "p.group_id IS NULL")
+            if group_id:
+                args.append(group_id)
         if date_from:
             where.append("p.date >= ?")
             args.append(date_from)
@@ -1242,6 +1311,8 @@ class Store:
                     "cost": round(costs.get(r["id"], 0.0), 2),
                     "date": r["date"],
                     "project": r["project"],
+                    "group_id": r["group_id"],
+                    "group_name": r["group_name"] or "",
                     "notes": r["notes"],
                     "failed": int(r["failed"] or 0),
                     "url": r["url"] or "",
@@ -1267,17 +1338,24 @@ class Store:
         failed = 1 if data.get("failed") else 0
         url = clean_url(data.get("url"))
 
+        # "group" absent means leave it alone -- an edit that does not mention
+        # the group must not silently pull a print out of one
+        gid = self.group_id_for(data["group"]) if "group" in data else None
+        set_group = "group" in data
+
         if pid:
             self.db.execute(
                 "UPDATE prints SET date=?, project=?, notes=?, failed=?, url=? WHERE id=?",
                 (pdate, project, notes, failed, url, pid),
             )
+            if set_group:
+                self.db.execute("UPDATE prints SET group_id=? WHERE id=?", (gid, pid))
             self.db.execute("DELETE FROM print_items WHERE print_id=?", (pid,))
         else:
             cur = self.db.execute(
-                "INSERT INTO prints(date, project, notes, created_at, failed, url) "
-                "VALUES(?,?,?,?,?,?)",
-                (pdate, project, notes, now(), failed, url),
+                "INSERT INTO prints(date, project, notes, created_at, failed, url, group_id) "
+                "VALUES(?,?,?,?,?,?,?)",
+                (pdate, project, notes, now(), failed, url, gid),
             )
             pid = cur.lastrowid
         for i in items:
@@ -1363,17 +1441,27 @@ class Store:
                 "GROUP BY f.material ORDER BY g DESC"
             )
         ]
-        proj_split = split_by("p.project", "p.project, f.id")
-        proj_prints = {r["project"]: r["n"] for r in db.execute(
-            "SELECT project, COUNT(*) n FROM prints GROUP BY project")}
+        # A print in a group counts under the group; one without keeps its own
+        # name. That is the whole trick: grouping changes nothing for the prints
+        # that are a project all by themselves.
+        NAME = "COALESCE((SELECT g.name FROM groups g WHERE g.id = p.group_id), p.project)"
+        proj_split = split_by(NAME, NAME + ", f.id")
+        proj_prints = {r["k"]: r["n"] for r in db.execute(
+            "SELECT %s k, COUNT(*) n FROM prints p GROUP BY k" % NAME)}
         top_projects = [
-            {"project": r["project"], "grams": round(r["g"], 2),
-             "prints": proj_prints.get(r["project"], 0),
-             "split": proj_split.get(r["project"], [])}
+            {"project": r["gname"], "grams": round(r["g"], 2),
+             "group_id": r["gid"],
+             "prints": proj_prints.get(r["gname"], 0),
+             "split": proj_split.get(r["gname"], [])}
             for r in db.execute(
-                "SELECT p.project, COALESCE(SUM(pi.grams),0) g FROM prints p "
+                # the alias must not be "project": prints has a column by that
+                # name, and SQLite would bind GROUP BY to the column instead of
+                # to this expression -- grouping by the old names while showing
+                # the group's, which reads as a group that lost most of its grams
+                "SELECT %s AS gname, MAX(p.group_id) gid, "
+                "COALESCE(SUM(pi.grams),0) g FROM prints p "
                 "JOIN print_items pi ON pi.print_id = p.id "
-                "GROUP BY p.project ORDER BY g DESC LIMIT 12"
+                "GROUP BY gname ORDER BY g DESC LIMIT 12" % NAME
             )
         ]
         by_weekday = [0.0] * 7
