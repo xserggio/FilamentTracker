@@ -109,12 +109,18 @@ def read_slice(path: str) -> dict:
             grams = 0.0
         if grams <= 0:
             continue
+        try:
+            slot = int(a.get("id") or 0)
+        except ValueError:
+            slot = 0
         items.append({
             "material": (a.get("type") or "").strip(),
             "hex": (a.get("color") or "").strip(),
             "grams": round(grams, 2),
             "metres": round(float(a.get("used_m") or 0), 2),
             "tray": (a.get("tray_info_idx") or "").strip(),
+            # which filament slot the plate pulled this from, 1-based
+            "slot": slot,
         })
     if not items:
         return {}
@@ -125,9 +131,16 @@ def read_slice(path: str) -> dict:
         m for m in re.findall(r'<object[^>]*name="([^"]+)"', xml) if m))
     project = ", ".join(_clean_name(o) for o in objects[:3])
 
+    # There is one profile per slot the printer has, but only the slots a plate
+    # actually used appear above. Pairing them by position hands the filament in
+    # slot 4 the profile of slot 1 on any plate that does not start at 1 -- and
+    # the product line in that profile is the strongest term in the ranking, so
+    # a single-colour plate off the last slot was being matched against the
+    # wrong product line entirely.
     profiles = _profiles(z, names)
     for i, item in enumerate(items):
-        item["profile"] = profiles[i] if i < len(profiles) else ""
+        at = item["slot"] - 1 if item["slot"] else i
+        item["profile"] = profiles[at] if 0 <= at < len(profiles) else ""
 
     return {
         "path": path,
