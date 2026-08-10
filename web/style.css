@@ -985,3 +985,43 @@ tr:has(.fail-btn.on) .row-actions{opacity:1}
 .pinfo-group{
   border:0;padding:0;background:none;font:inherit;color:inherit;cursor:pointer;
 }
+
+/* One block per machine. An AMS is one box with four bays in it; an AMS Lite is
+   four holders standing apart on a rack. Same four spools, and the difference
+   is the whole point of asking which you have. */
+.ams-unit{margin-bottom:20px}
+.ams-unit-head{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.ams-unit-head h3{font-size:var(--t-md);font-weight:600}
+.ams-unit-head .tag{text-transform:none;letter-spacing:0}
+.ams-unit-head .icon-btn{margin-left:auto}
+
+.ams-bays{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.ams-bays{grid-template-columns:repeat(2,1fr)}}
+
+/* the closed box: one enclosure, the bays inside it and touching */
+.is-ams .ams-bays{
+  gap:0;background:var(--bg-2);border:1px solid var(--line);
+  border-radius:var(--r);padding:10px;
+}
+.is-ams .ams-slot{border-radius:0;border-left-width:0;background:var(--surface)}
+.is-ams .ams-slot:first-child{border-left-width:1px;border-radius:var(--r-sm) 0 0 var(--r-sm)}
+.is-ams .ams-slot:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0}
+
+/* the open rack: four holders, each on its own, sitting on a rail */
+.is-lite .ams-bays{
+  gap:14px;padding-top:12px;border-top:2px solid var(--line-2);
+}
+.is-lite .ams-slot{border-radius:var(--r)}
+.is-lite .ams-slot::before{
+  content:"";position:absolute;top:-13px;left:50%;width:2px;height:12px;
+  background:var(--line-2);
+}
+.is-lite .ams-slot{position:relative}
+
+/* a machine whose kind was never said cannot be drawn as either */
+.ams-ask{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:15px 16px;border:1px dashed var(--line-2);border-radius:var(--r);
+  color:var(--muted);font-size:var(--t-md);
+}
+.ams-ask b{color:var(--text);font-weight:600}

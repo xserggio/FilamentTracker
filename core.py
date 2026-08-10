@@ -133,6 +133,21 @@ CREATE TABLE IF NOT EXISTS groups (
     created_at    TEXT NOT NULL DEFAULT ''
 );
 
+-- The AMSes themselves, because they are not interchangeable. An AMS is a
+-- closed box of four bays; an AMS Lite is four spool holders out in the open on
+-- a stand. Drawing one as the other is a small lie about the machine sitting in
+-- front of you, and there is no way to tell which you own by looking at the
+-- data, so it is asked rather than assumed -- kind is empty until it is.
+--
+-- The name is whose it is. One person can have two printers, and "A3" says
+-- nothing about which of them you are standing next to.
+CREATE TABLE IF NOT EXISTS ams_units (
+    unit          INTEGER PRIMARY KEY,
+    kind          TEXT NOT NULL DEFAULT '',
+    name          TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT ''
+);
+
 -- Which spool is in which AMS slot right now. A slot is identified by its
 -- unit and position rather than by a row id, so the layout can grow or shrink
 -- with the printer without renumbering anything. An empty slot is simply a row
@@ -168,7 +183,6 @@ DEFAULT_SETTINGS = {
     "slicer_watch": "1",           # offer a print when Bambu Studio slices one
     "slicer_seen": "0",            # newest slice already offered (epoch seconds)
     "slicer_dir": "",              # folder to watch ("" = find it)
-    "ams_units": "1",              # AMS units on the printer (0 = external spool only)
     "alert_mutes": "{}",           # alerts silenced until their situation clears
 }
 
@@ -419,6 +433,24 @@ class Store:
 
     def _migrate(self):
         """Adds new columns to databases created by earlier versions."""
+        # The count used to live in the settings, which could say how many but
+        # never which. Whatever it said becomes that many units of unknown
+        # kind, and the tab asks; guessing here would be the assumption this
+        # table exists to avoid.
+        have = self.db.execute("SELECT COUNT(*) n FROM ams_units").fetchone()["n"]
+        if not have:
+            try:
+                n = int(self.db.execute(
+                    "SELECT value FROM settings WHERE key='ams_units'"
+                ).fetchone()["value"])
+            except (TypeError, ValueError, KeyError):
+                n = 0
+            for unit in range(1, max(0, min(4, n)) + 1):
+                self.db.execute(
+                    "INSERT INTO ams_units(unit, kind, name, created_at) VALUES(?,'','',?)",
+                    (unit, now()))
+            self.db.commit()
+
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(slices)")}
         if cols and "copy_path" not in cols:
             self.db.execute(
@@ -1264,6 +1296,54 @@ class Store:
         self.db.commit()
         return gid
 
+    # ---------- the AMSes themselves ----------
+
+    AMS_KINDS = ("ams", "lite")
+
+    def ams_units(self) -> list:
+        """Every AMS, in order, with its kind and its name."""
+        return [dict(r) for r in self.db.execute(
+            "SELECT unit, kind, name FROM ams_units ORDER BY unit")]
+
+    def save_ams_unit(self, unit: int, kind: str = None, name: str = None) -> None:
+        """Set what an AMS is and what it is called. Absent means leave alone."""
+        unit = int(unit)
+        row = self.db.execute(
+            "SELECT kind, name FROM ams_units WHERE unit=?", (unit,)).fetchone()
+        if row is None:
+            raise ValueError("There is no AMS %d." % unit)
+        if kind is not None:
+            kind = (kind or "").strip().lower()
+            if kind and kind not in self.AMS_KINDS:
+                raise ValueError("Unknown kind of AMS.")
+            self.db.execute("UPDATE ams_units SET kind=? WHERE unit=?", (kind, unit))
+        if name is not None:
+            self.db.execute("UPDATE ams_units SET name=? WHERE unit=?",
+                            ((name or "").strip(), unit))
+        self.db.commit()
+
+    def add_ams_unit(self, kind: str = "", name: str = "") -> int:
+        """Add one, taking the lowest free number. Four is the printer's limit."""
+        taken = {r["unit"] for r in self.db.execute("SELECT unit FROM ams_units")}
+        unit = next((n for n in range(1, 5) if n not in taken), 0)
+        if not unit:
+            raise ValueError("Four is as many as there can be.")
+        kind = (kind or "").strip().lower()
+        if kind and kind not in self.AMS_KINDS:
+            raise ValueError("Unknown kind of AMS.")
+        self.db.execute(
+            "INSERT INTO ams_units(unit, kind, name, created_at) VALUES(?,?,?,?)",
+            (unit, kind, (name or "").strip(), now()))
+        self.db.commit()
+        return unit
+
+    def remove_ams_unit(self, unit: int) -> None:
+        """Take one away, and with it whatever it was holding."""
+        unit = int(unit)
+        self.db.execute("DELETE FROM ams_slots WHERE unit=?", (unit,))
+        self.db.execute("DELETE FROM ams_units WHERE unit=?", (unit,))
+        self.db.commit()
+
     # ---------- what is loaded in the AMS ----------
 
     AMS_SLOTS_PER_UNIT = 4
@@ -1275,10 +1355,7 @@ class Store:
         The external spool holder is unit 0 and always present -- it exists with
         or without an AMS, and plenty of prints come off it.
         """
-        try:
-            units = max(0, min(4, int(self.get_settings().get("ams_units", 1))))
-        except ValueError:
-            units = 1
+        units = self.ams_units()
 
         loaded = {(r["unit"], r["slot"]): (r["filament_id"], r["loaded_at"] or "")
                   for r in self.db.execute(
@@ -1291,9 +1368,12 @@ class Store:
                     "loaded_at": when, "filament": by_id.get(fid)}
 
         out = []
-        for unit in range(1, units + 1):
+        for u in units:
             for slot in range(1, self.AMS_SLOTS_PER_UNIT + 1):
-                out.append(cell(unit, slot))
+                c = cell(u["unit"], slot)
+                c["kind"] = u["kind"]
+                c["unit_name"] = u["name"]
+                out.append(c)
         out.append(cell(self.EXTERNAL, 1, external=True))
         return out
 
@@ -1311,10 +1391,7 @@ class Store:
         slicing with it happen within minutes of each other, and the tab only
         stores the day.
         """
-        try:
-            units = max(0, min(4, int(self.get_settings().get("ams_units", 1))))
-        except ValueError:
-            units = 1
+        units = max((u["unit"] for u in self.ams_units()), default=0)
         # Straight off the slots table rather than through ams(): that one
         # builds the whole inventory to hang a filament on each slot, and this
         # is asked once per plate -- thirty plates were costing thirty
@@ -1338,6 +1415,13 @@ class Store:
         of wherever it was, because that is what happened in the real world.
         """
         unit, slot = int(unit), int(slot)
+        # Loading a bay of a machine that is not there leaves a row nothing can
+        # reach: ams() walks the machines, so the spool would be neither in the
+        # AMS nor free. The external holder is the exception -- it belongs to no
+        # machine and is always there.
+        if unit != self.EXTERNAL and not any(
+                u["unit"] == unit for u in self.ams_units()):
+            raise ValueError("There is no AMS %d." % unit)
         self.db.execute("DELETE FROM ams_slots WHERE unit=? AND slot=?", (unit, slot))
         if filament_id:
             self.db.execute("DELETE FROM ams_slots WHERE filament_id=?", (int(filament_id),))
