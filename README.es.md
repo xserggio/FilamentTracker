@@ -200,9 +200,18 @@ impresora, así que esto lo llevas tú — un clic en un hueco para poner o quit
 un rollo. Todos los huecos se dibujan tengan algo o no, porque saber que uno
 está libre vale tanto como saber qué hay en él, y la bobina externa siempre está.
 
-Las unidades se eligen en la propia pestaña, de ninguna a cuatro, con cuatro
-huecos cada una. Una bobina solo puede estar en un sitio, así que cargarla en
-otro hueco la saca de donde estaba, y el selector te dice dónde está ya cada una.
+**Un AMS no es un AMS Lite.** Uno es una caja cerrada con cuatro bahías dentro;
+el otro son cuatro soportes al aire sobre un sujetarrollos. En los datos no hay
+nada que diga cuál tienes, así que la app lo pregunta en vez de elegir por ti, y
+dibuja cada uno como lo que es. Una instalación nueva empieza sin ninguno —solo
+la bobina externa— y vas añadiendo los que tengas.
+
+**Cada uno puede decir de qué impresora es.** *A1 del salón*, *P1S del taller*.
+El tope son cuatro, y los huecos siguen llamándose `A1`–`A4`, `B1`–`B4` y demás,
+así que una placa que salió del hueco 3 se sigue leyendo como el hueco 3.
+
+Una bobina solo puede estar en un sitio, así que cargarla en otro hueco la saca
+de donde estaba, y el selector te dice dónde está ya cada una.
 
 ### Registrar una impresión
 

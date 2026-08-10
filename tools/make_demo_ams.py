@@ -20,8 +20,15 @@ WANT = ["PLA - red", "PLA - grey", "PETG - black", "PLA Silk - gold", "PLA - bla
 
 def main(path):
     s = Store(path)
+    # The sample owns one of each, because the two are drawn differently and a
+    # screenshot of only one says nothing about the other.
+    for unit, kind, name in ((1, "lite", "A1"), (2, "ams", "P1S")):
+        if not any(u["unit"] == unit for u in s.ams_units()):
+            s.add_ams_unit(kind, name)
+        else:
+            s.save_ams_unit(unit, kind, name)
     by_name = {f["name"]: f["id"] for f in s.filaments()}
-    slots = [(1, 1), (1, 2), (1, 3), (1, 4), (0, 1)]
+    slots = [(1, 1), (1, 2), (1, 3), (1, 4), (2, 1)]
     n = 0
     for (unit, slot), name in zip(slots, WANT):
         if name in by_name:

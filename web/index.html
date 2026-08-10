@@ -129,16 +129,12 @@
       <section class="view" id="view-ams" hidden>
         <div class="toolbar">
           <p class="muted small-note" data-i18n="ams.sub" style="flex:1"></p>
-          <label class="field ams-units">
-            <span data-i18n="ams.units">AMS units</span>
-            <select id="amsUnits" class="select">
-              <option value="0" data-i18n="ams.unitsNone">None, external spool only</option>
-              <option value="1">1</option><option value="2">2</option>
-              <option value="3">3</option><option value="4">4</option>
-            </select>
-          </label>
+          <button class="btn sm" id="amsAdd">
+            <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg>
+            <span data-i18n="ams.add">Add an AMS</span>
+          </button>
         </div>
-        <div id="amsSlots" class="ams-grid"></div>
+        <div id="amsUnitList"></div>
       </section>
 
       <section class="view" id="view-history" hidden>
@@ -667,6 +663,31 @@
     <footer class="modal-foot">
       <button class="btn ghost" data-close data-i18n="btn.close">Close</button>
       <button class="btn primary" id="pinfoEdit" data-i18n="inv.edit">Edit</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: which AMS is this ============ -->
+<!-- An AMS is a closed box of four bays; an AMS Lite is four holders on a
+     stand. Nothing in the data says which you own, so it is asked. -->
+<div class="overlay" id="amsUnitModal" hidden>
+  <div class="modal narrow">
+    <header class="modal-head">
+      <h2 id="amsUnitTitle" data-i18n="ams.add">Add an AMS</h2>
+      <button class="icon-btn" data-close>&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="mm-choice" id="amsKindPick"></div>
+      <label class="field" style="margin-top:15px">
+        <span><span data-i18n="ams.name">Which printer</span> <i data-i18n="common.optional"></i></span>
+        <input type="text" id="amsUnitName" data-i18n-ph="ams.namePh" autocomplete="off">
+        <small data-i18n="ams.nameHelp"></small>
+      </label>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn danger ghost" id="amsUnitRemove" hidden data-i18n="ams.remove">Remove</button>
+      <button class="btn ghost" data-close data-i18n="btn.cancel">Cancel</button>
+      <button class="btn primary" id="amsUnitSave" data-i18n="btn.save">Save</button>
     </footer>
   </div>
 </div>

@@ -16,7 +16,7 @@ const S = {
   infoPrint: null, infoProject: null,
   mismatchTarget: null,
   slice: null, sliceTimer: null, snoozed: new Set(), sliceFolder: null,
-  ams: [], amsTarget: null,
+  ams: [], amsUnits: [], amsTarget: null, amsUnitEdit: null, amsKind: '',
 };
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -1048,11 +1048,12 @@ const amsName = (s) => (s.external ? t('ams.external')
   : `${String.fromCharCode(64 + s.unit)}${s.slot}`);
 
 async function renderAms() {
-  $('#amsUnits').value = S.settings.ams_units ?? '1';
-  const list = await call('ams');
-  S.ams = failed(list) ? [] : (list || []);
+  const got = await call('ams');
+  S.ams = failed(got) ? [] : (got.slots || []);
+  S.amsUnits = failed(got) ? [] : (got.units || []);
+  $('#amsAdd').hidden = S.amsUnits.length >= 4;
 
-  $('#amsSlots').innerHTML = S.ams.map((s, i) => {
+  const slotHtml = (s, i) => {
     const f = s.filament;
     return `<div class="ams-slot${f ? '' : ' is-empty'}${s.external ? ' is-ext' : ''}"
                  data-ams="${i}" role="button" tabindex="0">
@@ -1071,13 +1072,80 @@ async function renderAms() {
       <div class="bar"><i style="width:${Math.min(100, f.pct)}%;background:${statusColor(f)}"></i></div>`
       : `<div class="ams-body"><span class="ams-free">${svg('plus')}${esc(t('ams.empty'))}</span></div>`}
     </div>`;
-  }).join('');
+  };
 
-  $$('#amsSlots [data-ams]').forEach((n) => {
+  // One block per machine, and the external holder on its own at the end: it
+  // belongs to no AMS and is there whether or not you own one.
+  const ext = S.ams.filter((x) => x.external);
+  $('#amsUnitList').innerHTML = S.amsUnits.map((u) => {
+    const bays = S.ams.filter((x) => !x.external && x.unit === u.unit);
+    return `<div class="ams-unit ${u.kind ? `is-${u.kind}` : ''}">
+      <div class="ams-unit-head">
+        <h3>${esc(u.name || t('ams.unitN', { n: u.unit }))}</h3>
+        ${u.kind ? `<span class="tag">${esc(t(`ams.kind.${u.kind}`))}</span>` : ''}
+        <button class="icon-btn" data-unit="${u.unit}"
+                title="${esc(t('ams.edit'))}">${svg('pencil')}</button>
+      </div>
+      ${u.kind ? `<div class="ams-bays">${bays.map((x) =>
+        slotHtml(x, S.ams.indexOf(x))).join('')}</div>`
+      // never drawn as one or the other until it is known which it is
+      : `<div class="ams-ask">
+           <span>${esc(t('ams.askKind'))}</span>
+           <button class="btn sm" data-ask="${u.unit}">${esc(t('ams.choose'))}</button>
+         </div>`}
+    </div>`;
+  }).join('') + (ext.length ? `<div class="ams-unit"><div class="ams-bays" style="grid-template-columns:repeat(4,1fr)">${
+    ext.map((x) => slotHtml(x, S.ams.indexOf(x))).join('')}</div></div>` : '');
+
+  $$('#amsUnitList [data-unit]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); openAmsUnit(+b.dataset.unit); };
+  });
+  $$('#amsUnitList [data-ask]').forEach((b) => {
+    b.onclick = () => openAmsUnit(+b.dataset.ask);
+  });
+
+  $$('#amsUnitList [data-ams]').forEach((n) => {
     const open = () => openAmsPick(S.ams[+n.dataset.ams]);
     n.onclick = open;
     n.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } };
   });
+}
+
+/* Nothing in the data says whether an AMS is the closed box or the open rack,
+   and they do not look alike, so it is asked once per machine rather than
+   guessed for everyone. The name is for the second printer. */
+function openAmsUnit(unit) {
+  const u = unit ? S.amsUnits.find((x) => x.unit === unit) : null;
+  S.amsUnitEdit = u || null;
+  S.amsKind = u ? u.kind : '';
+  $('#amsUnitTitle').textContent = u ? t('ams.edit') : t('ams.add');
+  $('#amsUnitName').value = u ? u.name : '';
+  $('#amsUnitRemove').hidden = !u;
+  renderAmsKinds();
+  show('#amsUnitModal');
+  $('#amsUnitName').focus();
+}
+
+function renderAmsKinds() {
+  $('#amsKindPick').innerHTML = ['ams', 'lite'].map((k) => `
+    <button class="btn wide-btn${S.amsKind === k ? ' primary' : ''}" data-kind="${k}">
+      <b>${esc(t(`ams.kind.${k}`))}</b>
+      <small>${esc(t(`ams.kind.${k}Sub`))}</small>
+    </button>`).join('');
+  $$('#amsKindPick [data-kind]').forEach((b) => {
+    b.onclick = () => { S.amsKind = b.dataset.kind; renderAmsKinds(); };
+  });
+}
+
+async function saveAmsUnit() {
+  if (!S.amsKind) return toast(t('ams.needKind'), 'error');
+  const name = $('#amsUnitName').value.trim();
+  const r = S.amsUnitEdit
+    ? await call('save_ams_unit', { unit: S.amsUnitEdit.unit, kind: S.amsKind, name })
+    : await call('add_ams_unit', { kind: S.amsKind, name });
+  if (failed(r)) return;
+  hide('#amsUnitModal');
+  renderAms();
 }
 
 /* A spool can only be in one place, so the list says where each one already is
@@ -2021,11 +2089,18 @@ function wire() {
   };
 
   $('#amsClear').onclick = () => setAmsSlot(null);
-  $('#amsUnits').onchange = async (e) => {
-    const r = await call('save_settings', { ams_units: e.target.value });
-    if (failed(r)) return;
-    S.settings.ams_units = e.target.value;
-    renderAms();
+  $('#amsAdd').onclick = () => openAmsUnit(0);
+  $('#amsUnitSave').onclick = saveAmsUnit;
+  $('#amsUnitRemove').onclick = () => {
+    const u = S.amsUnitEdit;
+    confirmDialog(t('ams.remove'),
+      t('ams.removeAsk', { name: u.name || t('ams.unitN', { n: u.unit }) }),
+      async () => {
+        const r = await call('remove_ams_unit', { unit: u.unit });
+        if (failed(r)) return;
+        hide('#amsUnitModal');
+        renderAms();
+      });
   };
 
   $('#sliceAdd').onclick = () => openPrintFromSlice(S.slice);

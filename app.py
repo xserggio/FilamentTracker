@@ -270,10 +270,36 @@ class Api:
     # ---------- the AMS ----------
 
     def ams(self):
+        """The AMSes and what is in them. Both together: a slot means nothing
+        without knowing which machine it belongs to and what shape it is."""
         try:
-            return ok(self._store.ams())
+            return ok({"units": self._store.ams_units(),
+                       "slots": self._store.ams()})
         except Exception as e:
             traceback.print_exc()
+            return err(e)
+
+    def add_ams_unit(self, data=None):
+        data = data or {}
+        try:
+            return ok({"unit": self._store.add_ams_unit(
+                data.get("kind", ""), data.get("name", ""))})
+        except Exception as e:
+            return err(e)
+
+    def save_ams_unit(self, data):
+        try:
+            self._store.save_ams_unit(
+                data["unit"], data.get("kind"), data.get("name"))
+            return ok()
+        except Exception as e:
+            return err(e)
+
+    def remove_ams_unit(self, data):
+        try:
+            self._store.remove_ams_unit(data["unit"])
+            return ok()
+        except Exception as e:
             return err(e)
 
     def set_ams_slot(self, data):
