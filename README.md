@@ -196,9 +196,18 @@ one is kept by hand — one click on a slot to load or empty it. Every slot is
 drawn whether or not it holds something, because knowing a slot is free is as
 useful as knowing what is in it, and the external spool holder is always there.
 
-Units are set from the tab itself, none to four, four slots each. A spool can
-only be in one place, so loading it somewhere else takes it out of wherever it
-was, and the picker tells you where each one already is.
+**An AMS is not an AMS Lite.** One is a closed box with four bays inside it;
+the other is four spool holders out in the open on a rack. Nothing in the data
+says which you own, so the app asks rather than picking one for you, and draws
+each as what it is. A fresh install starts with none at all — just the external
+spool holder — and you add the ones you have.
+
+**Each one can say which printer it belongs to.** *A1 in the study*, *P1S in the
+workshop*. Four is the limit, and slot names stay `A1`–`A4`, `B1`–`B4` and so on,
+so a plate that came off slot 3 still reads as slot 3.
+
+A spool can only be in one place, so loading it somewhere else takes it out of
+wherever it was, and the picker tells you where each one already is.
 
 ### Logging a print
 

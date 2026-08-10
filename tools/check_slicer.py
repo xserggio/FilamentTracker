@@ -142,12 +142,23 @@ from core import Store                                             # noqa: E402
 st = Store(os.path.join(tempfile.mkdtemp(), "check.db"))
 fid = st.add_filament({"name": "PLA Matte - Black", "material": "PLA Matte",
                        "hex": "#26262a", "spool_g": 1000})
-st.set_ams_slot(1, 2, fid)
-hoy = st.ams()[1]["loaded_at"]
+# A machine has to exist before anything can be in it: a new database owns none.
+unidad = st.add_ams_unit("lite", "A1")
+st.set_ams_slot(unidad, 2, fid)
+hoy = next(x["loaded_at"] for x in st.ams() if x["filament"])
 
 check("laminado anterior: no cuenta", 2 in st.ams_by_plate_slot("2020-01-01T10:00:00"), False)
 check("laminado del mismo dia: cuenta", 2 in st.ams_by_plate_slot(hoy + "T10:00:00"), True)
 check("laminado posterior: cuenta", 2 in st.ams_by_plate_slot("2099-01-01T10:00:00"), True)
+
+
+# Cargar un hueco de una maquina que no existe dejaria la fila fuera del alcance
+# de ams(), que recorre las maquinas: ni en el AMS ni libre.
+try:
+    st.set_ams_slot(3, 1, fid)
+    check("hueco de una maquina inexistente", "lo acepto", "que lo rechace")
+except ValueError:
+    check("hueco de una maquina inexistente", "rechazado", "rechazado")
 
 print()
 if fails:
