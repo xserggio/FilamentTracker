@@ -1415,6 +1415,13 @@ class Store:
         of wherever it was, because that is what happened in the real world.
         """
         unit, slot = int(unit), int(slot)
+        # Loading a bay of a machine that is not there leaves a row nothing can
+        # reach: ams() walks the machines, so the spool would be neither in the
+        # AMS nor free. The external holder is the exception -- it belongs to no
+        # machine and is always there.
+        if unit != self.EXTERNAL and not any(
+                u["unit"] == unit for u in self.ams_units()):
+            raise ValueError("There is no AMS %d." % unit)
         self.db.execute("DELETE FROM ams_slots WHERE unit=? AND slot=?", (unit, slot))
         if filament_id:
             self.db.execute("DELETE FROM ams_slots WHERE filament_id=?", (int(filament_id),))
